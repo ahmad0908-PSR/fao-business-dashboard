@@ -15,16 +15,25 @@ def transform_phase_data(phase_df):
 
 def get_color(status):
     if pd.isna(status):
-        return "#f0f0f0"
-    status = str(status).lower()
-    if "completed" in status:
-        return "#8cc3b0"
+        return "#f8fafc"
+
+    status = str(status).lower().strip()
+
+    if "selected" in status:
+        return "#fef3c7"
+
+    elif status == "yes" or "completed" in status:
+        return "#d1fae5"  # Strong green - for Completed and Yes
+
     elif "submitted" in status:
-        return "#a8e6cf"
+        return "#dbeafe"  # Light green - for Submitted to FAO
+
     elif "ongoing" in status:
-        return "#5b7ea6"
-    elif "not started" in status:
-        return "#cfd3d6"
+        return "#2166a8"  # Blue - for Ongoing
+
+    elif status == "no" or "not started" in status:
+        return "#f1f5f9"  # Gray - for Not Started and No
+
     else:
         return "#ffffff"
 
@@ -45,6 +54,7 @@ def render_table(filtered_df, business_df, phase_df):
     stage_map = {
         "assessment":           "assessment",
         "ver_report":           "report development and sumbission 1",
+        "selected_bds":         "selected for bds", # I added this new choice in the spreadsheets!
         "diagnostic":           "diagnostic assessment and capacity building",
         "bp_dev":               "business plan development",
         "report2":              "report development and submission 2",
@@ -71,6 +81,14 @@ def render_table(filtered_df, business_df, phase_df):
                 if str(value).lower() == "completed":
                     display_value = "Submitted to FAO"
 
+            # 2. NEW: Selected for BDS stage: "Completed" → "Yes"
+            elif key == "selected_bds":
+                if str(value).lower() == "completed":
+                    display_value = "Yes"
+                elif str(value).lower() in ["not started", "nan", ""]:
+                    display_value = "No"  # Optional: show "No" instead of blank
+                # else: keep original status (e.g. "Ongoing")
+
             color = get_color(display_value)
             cell_text = display_value if pd.notna(display_value) else ""
             tbody_rows += (
@@ -80,36 +98,37 @@ def render_table(filtered_df, business_df, phase_df):
 
         tbody_rows += "</tr>"
 
-    # ── Build full HTML (once) ────────────────────────────────────────
-    html = f"""
-    <div style="max-height:500px; overflow-y:auto; overflow-x:auto; border:1px solid #444;">
-      <table style="width:100%; border-collapse:collapse; font-size:12px;">
-        <thead>
-          <tr>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#2f7aa1; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a;">#</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#2f7aa1; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a;">Enterprise Name</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#2f7aa1; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a;">Province</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#2f7aa1; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a;">Window</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#2f7aa1; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a;">Women Led</th>
-            <th colspan="2" style="position:sticky; top:0; background-color:#2f7aa1; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a; text-align:center;">Pre-Qualification Verification</th>
-            <th colspan="5" style="position:sticky; top:0; background-color:#2f7aa1; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a; text-align:center;">Business Development Support</th>
-          </tr>
-          <tr>
-            <th style="position:sticky; top:40px; background-color:#1a5f7a; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">Assessment</th>
-            <th style="position:sticky; top:40px; background-color:#1a5f7a; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">Ve-Report</th>
-            <th style="position:sticky; top:40px; background-color:#1a5f7a; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">Dig-Assessment</th>
-            <th style="position:sticky; top:40px; background-color:#1a5f7a; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">BP-Development</th>
-            <th style="position:sticky; top:40px; background-color:#1a5f7a; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">Dig-Assessment-Report</th>
-            <th style="position:sticky; top:40px; background-color:#1a5f7a; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">E-Capacity Building</th>
-            <th style="position:sticky; top:40px; background-color:#1a5f7a; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">Coaching/Monitoring</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tbody_rows}
-        </tbody>
-      </table>
-    </div>
-    """
+        # ── Build full HTML (once) ────────────────────────────────────────
+        html = f"""
+        <div style="max-height:500px; overflow-y:auto; overflow-x:auto; border:1px solid #444;">
+          <table style="width:100%; border-collapse:collapse; font-size:12px;">
+            <thead>
+              <tr>
+                <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a;">#</th>
+                <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a;">Enterprise Name</th>
+                <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a;">Province</th>
+                <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a;">Window</th>
+                <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a;">Women Led</th>
+                <th colspan="3" style="position:sticky; top:0; background-color:#1a3a5c; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a; text-align:center;">Pre-Qualification Verification</th>
+                <th colspan="5" style="position:sticky; top:0; background-color:#1a3a5c; color:white; z-index:3; padding:8px; border:1px solid #1a5f7a; text-align:center;">Business Development Support</th>
+              </tr>
+              <tr>
+                <th style="position:sticky; top:30px; background-color:#2166a8; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">Assessment</th>
+                <th style="position:sticky; top:30px; background-color:#2166a8; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">Ve-Report</th>
+                <th style="position:sticky; top:30px; background-color:#2166a8; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">Selected for BDS</th>
+                <th style="position:sticky; top:30px; background-color:#2166a8; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">Dig-Assessment</th>
+                <th style="position:sticky; top:30px; background-color:#2166a8; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">BP-Development</th>
+                <th style="position:sticky; top:30px; background-color:#2166a8; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">Dig-Assessment-Report</th>
+                <th style="position:sticky; top:30px; background-color:#2166a8; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">E-Capacity Building</th>
+                <th style="position:sticky; top:30px; background-color:#2166a8; color:white; z-index:2; padding:6px; border:1px solid #2f7aa1;">Coaching/Monitoring</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tbody_rows}
+            </tbody>
+          </table>
+        </div>
+        """
 
     # ✅ Single render call — components.html for sticky headers to work
     components.html(html, height=550, scrolling=True)

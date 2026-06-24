@@ -1,10 +1,15 @@
 import streamlit as st
 
-def render_filters(summary_df):
+def render_filters(summary_df, business_df):
 
     st.subheader("🔍 Filters")
 
-    col1, col2, col3, col4, col5 = st.columns(5)
+    # ✅ Merge Window column from business_df into summary for filtering
+    if "Window" not in summary_df.columns and "Business_ID" in business_df.columns:
+        window_map = business_df[["Business_ID", "Window"]].drop_duplicates()
+        summary_df = summary_df.merge(window_map, on="Business_ID", how="left")
+
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
 
     # ✅ Province
     with col1:
@@ -31,6 +36,14 @@ def render_filters(summary_df):
         status_options = ["All"] + sorted(summary_df["Status_Current"].dropna().unique().tolist())
         selected_status = st.selectbox("Status", status_options)
 
+    # ✅ Window — NEW
+    with col6:
+        if "Window" in summary_df.columns:
+            window_options = ["All"] + sorted(summary_df["Window"].dropna().unique().tolist())
+        else:
+            window_options = ["All", "W1A", "W1B", "W2", "W3"]
+        selected_window = st.selectbox("Window", window_options)
+
     # ✅ APPLY FILTERS
     filtered_df = summary_df.copy()
 
@@ -48,5 +61,8 @@ def render_filters(summary_df):
 
     if selected_status != "All":
         filtered_df = filtered_df[filtered_df["Status_Current"] == selected_status]
+
+    if selected_window != "All" and "Window" in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df["Window"] == selected_window]
 
     return filtered_df
