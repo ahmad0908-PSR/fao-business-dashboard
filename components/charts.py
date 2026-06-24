@@ -35,7 +35,11 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
         fig1.update_traces(
             textfont=dict(size=11, family="Segoe UI"),
         )
-        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(                                    # ✅ unique key added
+            fig1,
+            use_container_width=True,
+            key=f"donut_{phase_label}"
+        )
 
     # ✅ HORIZONTAL BAR — Businesses by Province
     with st.container(border=True):
@@ -78,7 +82,11 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
             textposition="outside",
             textfont=dict(size=10),
         )
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(                                    # ✅ unique key added
+            fig2,
+            use_container_width=True,
+            key=f"bar_{phase_label}"
+        )
 
     # ✅ STACKED BAR — Women Led vs Youth Inclusive by Province
     with st.container(border=True):
@@ -86,7 +94,6 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
         if "Province" not in filtered_df.columns:
             st.info("Province data not available.")
         else:
-            # ✅ Build counts per province for each inclusion metric
             provinces = filtered_df["Province"].dropna().unique()
 
             records = []
@@ -101,19 +108,18 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
                 youth_no  = total - youth_yes
 
                 records.append({
-                    "Province":         province,
-                    "Women Led":        women_yes,
-                    "Not Women Led":    women_no,
-                    "Youth Inclusive":  youth_yes,
-                    "Not Youth":        youth_no,
-                    "Total":            total,
+                    "Province":        province,
+                    "Women Led":       women_yes,
+                    "Not Women Led":   women_no,
+                    "Youth Inclusive": youth_yes,
+                    "Not Youth":       youth_no,
+                    "Total":           total,
                 })
 
             stacked_df = pd.DataFrame(records).sort_values(
                 "Total", ascending=True
             )
 
-            # ✅ Melt into long format for grouped stacked bar
             women_df = stacked_df[["Province", "Women Led", "Not Women Led"]].copy()
             women_df = women_df.melt(
                 id_vars="Province",
@@ -121,7 +127,6 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
                 var_name="Category",
                 value_name="Count",
             )
-            women_df["Group"] = "Women Led"
 
             youth_df = stacked_df[["Province", "Youth Inclusive", "Not Youth"]].copy()
             youth_df = youth_df.melt(
@@ -130,9 +135,7 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
                 var_name="Category",
                 value_name="Count",
             )
-            youth_df["Group"] = "Youth Inclusive"
 
-            # ✅ Build figure with two trace groups
             fig3 = go.Figure()
 
             color_map = {
@@ -167,7 +170,7 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
                         f"{category}: %{{x}}<br>"
                         "<extra></extra>"
                     ),
-                    offsetgroup=category.split()[0],  # groups Women / Youth separately
+                    offsetgroup=category.split()[0],
                 ))
 
             fig3.update_layout(
@@ -204,4 +207,8 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
                 bargroupgap=0.1,
             )
 
-            st.plotly_chart(fig3, use_container_width=True)
+            st.plotly_chart(                                # ✅ unique key added
+                fig3,
+                use_container_width=True,
+                key=f"stacked_{phase_label}"
+            )
