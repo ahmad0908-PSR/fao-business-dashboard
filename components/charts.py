@@ -55,9 +55,9 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
             title="Businesses by Province",
             color="Count",
             color_continuous_scale=[
-                [0.0, "#7ec8e3"],
-                [0.5, "#2166a8"],
-                [1.0, "#1a3a5c"],
+                [0.0, "#e59057"],
+                [0.5, "#e59057"],
+                [1.0, "#e59057"],
             ],
         )
         fig2.update_layout(
