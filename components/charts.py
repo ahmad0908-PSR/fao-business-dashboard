@@ -88,12 +88,11 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
             key=f"bar_{phase_label}"
         )
 
-        # ✅ STACKED BAR — Women Led vs Youth Inclusive by Province
+        # ✅ STACKED BAR — Women Led & Youth Inclusive by Province
         with st.container(border=True):
             if "Province" not in filtered_df.columns:
                 st.info("Province data not available.")
             else:
-                # ✅ Build counts per province for each inclusion metric
                 provinces = filtered_df["Province"].dropna().unique()
 
                 records = []
@@ -102,102 +101,93 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
                     total = len(prov_df)
 
                     women_yes = prov_df[prov_df["Women_Led"] == "Yes"].shape[0]
-                    women_no = total - women_yes
-
                     youth_yes = prov_df[prov_df["Youth_Inclusive"] == "Yes"].shape[0]
-                    youth_no = total - youth_yes
 
                     records.append({
                         "Province": province,
                         "Women Led": women_yes,
-                        "Not Women Led": women_no,
+                        "Not Women Led": total - women_yes,
                         "Youth Inclusive": youth_yes,
-                        "Not Youth": youth_no,
-                        "Total": total,
+                        "Not Youth": total - youth_yes,
                     })
 
-                stacked_df = pd.DataFrame(records).sort_values("Total", ascending=True)
-
-                # ✅ Melt into long format for grouped stacked bar
-                women_df = stacked_df[["Province", "Women Led", "Not Women Led"]].copy()
-                women_df = women_df.melt(
-                    id_vars="Province",
-                    value_vars=["Women Led", "Not Women Led"],
-                    var_name="Category",
-                    value_name="Count",
+                stacked_df = pd.DataFrame(records).sort_values(
+                    by=["Women Led", "Youth Inclusive"], ascending=True
                 )
-                women_df["Group"] = "Women Led"
 
-                youth_df = stacked_df[["Province", "Youth Inclusive", "Not Youth"]].copy()
-                youth_df = youth_df.melt(
-                    id_vars="Province",
-                    value_vars=["Youth Inclusive", "Not Youth"],
-                    var_name="Category",
-                    value_name="Count",
-                )
-                youth_df["Group"] = "Youth Inclusive"
-
-                # ✅ Build figure with two trace groups
+                # Create the figure
                 fig3 = go.Figure()
 
-                color_map = {
-                    "Women Led": "#2a9d8f",
-                    "Not Women Led": "#cbd5e1",
-                    "Youth Inclusive": "#2166a8",
-                    "Not Youth": "#e2e8f0",
-                }
+                # Women Led stack (bottom)
+                fig3.add_trace(go.Bar(
+                    y=stacked_df["Province"],
+                    x=stacked_df["Women Led"],
+                    name="Women Led",
+                    orientation="h",
+                    marker_color="#2f7aa1",          # Dark blue
+                    text=stacked_df["Women Led"],
+                    textposition="inside",
+                    textfont=dict(size=10, color="white"),
+                ))
 
-                for category, color in color_map.items():
-                    if category in ["Women Led", "Not Women Led"]:
-                        source_df = women_df[women_df["Category"] == category]
-                    else:
-                        source_df = youth_df[youth_df["Category"] == category]
+                fig3.add_trace(go.Bar(
+                    y=stacked_df["Province"],
+                    x=stacked_df["Not Women Led"],
+                    name="Not Women Led",
+                    orientation="h",
+                    marker_color="#cbd5e1",          # Light gray
+                    text=stacked_df["Not Women Led"],
+                    textposition="inside",
+                    textfont=dict(size=10, color="black"),
+                ))
 
-                    fig3.add_trace(go.Bar(
-                        name=category,
-                        y=source_df["Province"],
-                        x=source_df["Count"],
-                        orientation="h",
-                        marker=dict(color=color, line=dict(width=0)),
-                        text=source_df["Count"].apply(lambda v: str(int(v)) if v > 0 else ""),
-                        textposition="inside",
-                        textfont=dict(size=10, color="white", family="Segoe UI"),
-                        hovertemplate=(
-                            "<b>%{y}</b><br>"
-                            f"{category}: %{{x}}<br>"
-                            "<extra></extra>"
-                        ),
-                        offsetgroup=category.split()[0],
-                    ))
+                # Youth Inclusive stack (bottom)
+                fig3.add_trace(go.Bar(
+                    y=stacked_df["Province"],
+                    x=stacked_df["Youth Inclusive"],
+                    name="Youth Inclusive",
+                    orientation="h",
+                    marker_color="#4a9fc7",          # Medium blue/teal
+                    text=stacked_df["Youth Inclusive"],
+                    textposition="inside",
+                    textfont=dict(size=10, color="white"),
+                    offsetgroup="Youth",             # Separate group
+                ))
+
+                fig3.add_trace(go.Bar(
+                    y=stacked_df["Province"],
+                    x=stacked_df["Not Youth"],
+                    name="Not Youth",
+                    orientation="h",
+                    marker_color="#e2e8f0",          # Very light gray
+                    text=stacked_df["Not Youth"],
+                    textposition="inside",
+                    textfont=dict(size=10, color="black"),
+                    offsetgroup="Youth",
+                ))
 
                 fig3.update_layout(
-                    title=dict(
-                        text="Women Led & Youth Inclusive by Province",
-                        font=dict(size=13, family="Segoe UI", color="#1e293b"),
-                        x=0,
-                        xanchor="left",
-                    ),
+                    title="Women Led & Youth Inclusive by Province",
                     barmode="stack",
-                    height=380,
-                    margin=dict(t=50, b=80, l=10, r=10),
+                    height=420,
+                    margin=dict(t=50, b=80, l=10, r=20),
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(family="Segoe UI", size=11, color="#475569"),
+                    font=dict(family="Segoe UI", size=11),
                     legend=dict(
                         orientation="h",
                         yanchor="top",
-                        y=-0.2,
+                        y=-0.25,
                         xanchor="center",
-                        x=0,
-                        font=dict(size=10),
+                        x=0.5,
+                        font=dict(size=10)
                     ),
                     xaxis=dict(title="", gridcolor="#f1f5f9", tickfont=dict(size=10)),
-                    yaxis=dict(title="", tickfont=dict(size=10)),
-                    bargap=0.2,
-                    bargroupgap=0.1,
+                    yaxis=dict(title="", tickfont=dict(size=10), automargin=True),
+                    bargap=0.25,
+                    bargroupgap=0.15,
                 )
 
-                # ✅ Only render ONCE with unique key
                 st.plotly_chart(
                     fig3,
                     use_container_width=True,
