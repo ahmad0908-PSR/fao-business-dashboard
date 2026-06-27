@@ -4,7 +4,7 @@ from utils.data_loader import load_data, build_phase_summary
 from components.header import render_header
 from components.filters import render_filters
 from components.kpi_cards import render_kpis
-from components.charts import render_charts
+from components.charts import render_charts, render_progression_chart  # ✅ single clean import
 from components.map import render_map
 from components.table import render_table
 from components.footer import render_footer
@@ -31,7 +31,7 @@ html, body, [class*="css"] {
     background-color: #ffffff !important;
     border-radius: 8px !important;
     border: 1px solid #e2e8f0 !important;
-    border-top: 3px solid #2166a8 !important; 
+    border-top: 3px solid #2166a8 !important;
     box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
     padding: 16px !important;
 }
@@ -45,7 +45,7 @@ html, body, [class*="css"] {
     box-shadow: none !important;
 }
 
-/* ── KPI label — NO uppercase, readable size ── */
+/* ── KPI label ── */
 [data-testid="stMetricLabel"] > div {
     font-size: 11px !important;
     font-weight: 600 !important;
@@ -103,7 +103,7 @@ hr {
     margin: 10px 0 !important;
 }
 
-/* ── Refresh button ── */
+/* ── Buttons ── */
 [data-testid="stButton"] button {
     background-color: transparent !important;
     border: 1px solid #2166a8 !important;
@@ -116,7 +116,7 @@ hr {
 }
 
 [data-testid="stButton"] button:hover {
-    background-color: #2166a8 !important;  
+    background-color: #2166a8 !important;
     border-color: #2166a8 !important;
     color: #ffffff !important;
 }
@@ -142,7 +142,7 @@ if summary_df is None or summary_df.empty:
     st.error("❌ Data load failed")
     st.stop()
 
-# ✅ Refresh button inline with a label so it doesn't break layout
+# ✅ Refresh button
 if st.button("🔄 Refresh Data"):
     st.cache_data.clear()
     st.rerun()
@@ -151,7 +151,7 @@ if st.button("🔄 Refresh Data"):
 filtered_df = render_filters(summary_df, business_df)
 st.divider()
 
-# ✅ MAP — sits between filters and KPIs
+# ✅ MAP
 with st.container(border=True):
     render_map(filtered_df)
 st.divider()
@@ -177,7 +177,8 @@ with phase_col1:
             st.info("No Phase 1 data available.")
         else:
             render_kpis(phase1_df, business_df, phase_df, phase_label="Phase 1")
-            render_charts(phase1_df, phase_df=phase_df, phase_label="Phase 1")  # ✅ updated
+            render_progression_chart(filtered_phase_df, "Phase 1")   # ✅ NOW CALLED
+            render_charts(phase1_df, phase_df=filtered_phase_df, phase_label="Phase 1")
 
 # ── PHASE 2 ──
 with phase_col2:
@@ -189,7 +190,8 @@ with phase_col2:
             st.info("No Phase 2 data available.")
         else:
             render_kpis(phase2_df, business_df, phase_df, phase_label="Phase 2")
-            render_charts(phase2_df, phase_df=phase_df, phase_label="Phase 2")  # ✅ updated
+            render_progression_chart(filtered_phase_df, "Phase 2")   # ✅ NOW CALLED
+            render_charts(phase2_df, phase_df=filtered_phase_df, phase_label="Phase 2")
 
 st.divider()
 
@@ -202,11 +204,11 @@ st.divider()
 st.markdown("### Business Profile Lookup")
 st.caption("Search and view detailed profile for any business")
 
-col1, col2 = st.columns([3, 1])
+profile_col1, profile_col2 = st.columns([3, 1])
 
 business_list = summary_df[["Business_ID", "Enterprise_Name"]].drop_duplicates()
 
-selected_name = col1.selectbox(
+selected_name = profile_col1.selectbox(
     "Select Business",
     business_list["Enterprise_Name"],
     label_visibility="collapsed"
@@ -216,7 +218,7 @@ selected_business_id = business_list[
     business_list["Enterprise_Name"] == selected_name
 ]["Business_ID"].values[0]
 
-if col2.button("View Profile →"):
+if profile_col2.button("View Profile →"):
     from components.business_detail import render_business_detail
     render_business_detail(selected_business_id, business_df, phase_df, summary_df)
     st.stop()

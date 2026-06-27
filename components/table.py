@@ -14,19 +14,8 @@ def transform_phase_data(phase_df):
     return pivot
 
 
-def transform_capacity_type(phase_df):
-    """
-    Extract Capacity_Building_Type per Business_ID
-    for the E-Capacity-Building stage.
-    """
-    if "Capacity_Building_Type" not in phase_df.columns:
-        return {}
-
-    cap_rows = phase_df[
-        phase_df["Stage_Name"].str.strip() == "E-Capacity-Building"
-    ][["Business_ID", "Capacity_Building_Type"]].drop_duplicates("Business_ID")
-
-    return dict(zip(cap_rows["Business_ID"], cap_rows["Capacity_Building_Type"]))
+# ==================== REMOVED OLD FUNCTION ====================
+# def transform_capacity_type(...)  ← Deleted (no longer needed)
 
 
 def get_color(status):
@@ -36,22 +25,25 @@ def get_color(status):
     status = str(status).lower().strip()
 
     if "selected" in status or status == "yes":
-        return "#fef3c7"                # ✅ Amber — Selected / Yes
+        return "#fef3c7"           # Warm Amber
 
     elif "completed" in status:
-        return "#d1fae5"                # ✅ Soft green — Completed
+        return "#a7f3d0"           # Fresh Green (lighter & cleaner)
 
     elif "submitted" in status:
-        return "#dbeafe"                # ✅ Light blue — Submitted to FAO
+        return "#bfdbfe"           # Soft Sky Blue
 
     elif "ongoing" in status:
-        return "#2166a8"                # ✅ Primary blue — Ongoing
+        return "#1e40af"           # Professional Deep Blue
+
+    elif "not applicable" in status or status in ["n/a", "na"]:
+        return "#c7d2fe"           # Soft Indigo / Periwinkle
 
     elif "not started" in status or status == "no":
-        return "#f1f5f9"                # ✅ Light grey — Not Started / No
+        return "#e2e8f0"           # Slightly darker grey for better contrast
 
     else:
-        return "#ffffff"
+        return "#f1f5f9"
 
 
 def get_text_color(bg_color):
@@ -73,15 +65,12 @@ def render_table(filtered_df, business_df, phase_df):
     # ✅ Pivot phase data to wide format
     phase_wide = transform_phase_data(phase_df)
 
-    # ✅ Get capacity building type per business
-    capacity_type_map = transform_capacity_type(phase_df)
-
     # ✅ Merge summary with pivot
     df = filtered_df.copy()
     df = df.merge(phase_wide, on="Business_ID", how="left")
     df = df.reset_index(drop=True)
 
-    # ✅ Stage map — keys match EXACT Stage_Name values in your sheet now
+    # ✅ Stage map — Updated for new structure
     # Phase 1 stages
     phase1_stages = {
         "Assessment":       ("Assessment",      "pre"),
@@ -89,21 +78,21 @@ def render_table(filtered_df, business_df, phase_df):
         "Selected for BDS": ("Selected for BDS", "pre"),
     }
 
-    # Phase 2 stages
+    # Phase 2 stages — UPDATED
     phase2_stages = {
-        "Dig-Assessment":        ("Dig-Assessment",        "bds"),
-        "BP-Development":        ("BP-Development",         "bds"),
-        "Dig-Assessment-Report": ("Dig-Assessment-Report",  "bds"),
-        "E-Capacity-Building":   ("E-Capacity-Building",    "bds"),
-        "Coaching":              ("Coaching",               "bds"),
-        "Monitoring":            ("Monitoring",             "bds"),
+        "Dig-Assessment": ("Dig-Assessment", "bds"),
+        "BP-Development": ("BP-Development", "bds"),
+        "Dig-Assessment-Report": ("Dig-Assessment-Report", "bds"),
+        "Virtual-E-Capacity-Building": ("Virtual-E-Capacity-Building", "bds"),  # ✅ hyphens
+        "In-Person-E-Capacity-Building": ("In-Person-E-Capacity-Building", "bds"),  # ✅ hyphens
+        "Coaching": ("Coaching", "bds"),
+        "Monitoring": ("Monitoring", "bds"),
     }
 
     # ✅ Build tbody rows
     tbody_rows = ""
     for i, row in df.iterrows():
         biz_id = row.get("Business_ID", "")
-        cap_type = capacity_type_map.get(biz_id, "")
 
         tbody_rows += "<tr>"
         tbody_rows += f"<td style='border:1px solid #ddd; padding:6px; text-align:center; color:#1e293b;'>{i + 1}</td>"
@@ -112,17 +101,15 @@ def render_table(filtered_df, business_df, phase_df):
         tbody_rows += f"<td style='border:1px solid #ddd; padding:6px; color:#1e293b;'>{row.get('Window', '')}</td>"
         tbody_rows += f"<td style='border:1px solid #ddd; padding:6px; color:#1e293b;'>{row.get('Women_Led', '')}</td>"
 
-        # ✅ Phase 1 stages
+        # ✅ Phase 1 stages (unchanged)
         for stage_name, (col_name, group) in phase1_stages.items():
             value = row.get(col_name)
             display_value = value
 
-            # Ve-Report: Completed → Submitted to FAO
             if stage_name == "Ve-Report":
                 if pd.notna(value) and str(value).strip().lower() == "completed":
                     display_value = "Submitted to FAO"
 
-            # Selected for BDS: Completed → Yes, Not Started → No
             elif stage_name == "Selected for BDS":
                 val_lower = str(value).strip().lower() if pd.notna(value) else ""
                 if val_lower == "completed":
@@ -139,7 +126,7 @@ def render_table(filtered_df, business_df, phase_df):
                 f"white-space:nowrap;'>{cell_text}</td>"
             )
 
-        # ✅ Phase 2 stages
+        # ✅ Phase 2 stages — UPDATED
         for stage_name, (col_name, group) in phase2_stages.items():
             value = row.get(col_name)
             display_value = value
@@ -149,13 +136,7 @@ def render_table(filtered_df, business_df, phase_df):
                 if pd.notna(value) and str(value).strip().lower() == "completed":
                     display_value = "Submitted to FAO"
 
-            # E-Capacity-Building: show Type in brackets if available
-            elif stage_name == "E-Capacity-Building":
-                if pd.notna(value) and str(value).strip().lower() != "":
-                    if cap_type and str(cap_type).strip() not in ["", "nan"]:
-                        display_value = f"{value} ({cap_type})"
-                    else:
-                        display_value = value
+            # No special capacity type logic needed anymore (it's now separate stages)
 
             color = get_color(str(display_value).strip().lower() if pd.notna(display_value) else "")
             text_color = get_text_color(color)
@@ -168,7 +149,7 @@ def render_table(filtered_df, business_df, phase_df):
 
         tbody_rows += "</tr>"
 
-    # ✅ Build full HTML — OUTSIDE the for loop (critical fix)
+    # ✅ Build full HTML — Updated colspan and headers
     html = f"""
     <div style="max-height:500px; overflow-y:auto; overflow-x:auto; border:1px solid #e2e8f0;">
       <table style="width:100%; border-collapse:collapse; font-size:12px;">
@@ -187,9 +168,9 @@ def render_table(filtered_df, business_df, phase_df):
             <th colspan="3" style="position:sticky; top:0; background-color:#1a3a5c;
                 color:white; z-index:3; padding:8px; border:1px solid #0f2340;
                 text-align:center;">Pre-Qualification Verification</th>
-            <th colspan="6" style="position:sticky; top:0; background-color:#1a3a5c;
+            <th colspan="7" style="position:sticky; top:0; background-color:#1a3a5c;
                 color:white; z-index:3; padding:8px; border:1px solid #0f2340;
-                text-align:center;">Business Development Support</th>
+                text-align:center;">Business Development Support</th>   <!-- Changed from 6 to 7 -->
           </tr>
           <tr>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
@@ -205,7 +186,9 @@ def render_table(filtered_df, business_df, phase_df):
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
                 z-index:2; padding:6px; border:1px solid #1a4f8a;">Dig-Assessment-Report</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
-                z-index:2; padding:6px; border:1px solid #1a4f8a;">E-Capacity-Building</th>
+                z-index:2; padding:6px; border:1px solid #1a4f8a;">Virtual E-Capacity</th>   <!-- New -->
+            <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
+                z-index:2; padding:6px; border:1px solid #1a4f8a;">In-Person E-Capacity</th> <!-- New -->
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
                 z-index:2; padding:6px; border:1px solid #1a4f8a;">Coaching</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;

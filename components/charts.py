@@ -42,85 +42,327 @@ PROVINCE_COLORS = [
     "#c0392b",  # Pomegranate
 ]
 
+# ✅ Distinct professional colors for provinces
+PROVINCE_COLORS = [
+    "#2166a8", "#e07b39", "#2a9d8f", "#f4a261", "#1a3a5c",
+    "#4a90c4", "#e76f51", "#264653", "#a8dadc", "#e9c46a",
+    "#6a4c93", "#c77dff", "#80b918", "#f72585", "#3a86ff",
+    "#fb8500", "#8ecae6", "#219ebc", "#023047", "#ffb703",
+    "#cb4335", "#1d8348", "#7f8c8d", "#9b59b6", "#2ecc71",
+    "#e74c3c", "#3498db", "#f39c12", "#1abc9c", "#d35400",
+    "#8e44ad", "#2c3e50", "#16a085", "#c0392b",
+]
+
+# ✅ Stage definitions per phase — order matters
+PHASE1_STAGES = [
+    ("Assessment",       "#2166a8"),   # Primary Blue
+    ("Ve-Report",        "#4a90c4"),   # Medium Blue
+    ("Selected for BDS", "#2a9d8f"),   # Teal
+]
+
+PHASE2_STAGES = [
+    ("Dig-Assessment",           "#2166a8"),   # Primary Blue
+    ("BP-Development",           "#4a90c4"),   # Medium Blue
+    ("Dig-Assessment-Report",    "#2a9d8f"),   # Teal
+    ("Virtual E-Capacity-Building",  "#e07b39"),   # Orange
+    ("In-Person E-Capacity-Building","#f4a261"),   # Warm Orange
+    ("Coaching",                 "#8d6e63"),   # Brownish (new)
+    ("Monitoring",               "#1a3a5c"),   # Dark Navy
+]
+
+def render_progression_chart(phase_df, phase_label):
+    """
+    Shows how many businesses are CURRENTLY at each stage.
+    A business is counted at its HIGHEST reached stage only.
+    """
+
+    stages = PHASE1_STAGES if "1" in phase_label else PHASE2_STAGES
+    stage_names = [s[0] for s in stages]
+
+    with st.container(border=True):
+
+        st.markdown(f"#### Stage Progression — {phase_label}")
+
+        # ✅ Filter to this phase only
+        phase_rows = phase_df[
+            phase_df["Phase"].str.strip().str.lower() == phase_label.lower()
+        ].copy()
+
+        if phase_rows.empty:
+            st.info(f"No stage data available for {phase_label}.")
+            return
+
+        phase_rows["Stage_clean"]  = phase_rows["Stage_Name"].str.strip()
+        phase_rows["Status_clean"] = phase_rows["Status"].str.strip().str.lower()
+
+        # ✅ Stage order map
+        stage_order = {name: i for i, name in enumerate(stage_names)}
+
+        # ✅ For each business, find its CURRENT stage
+        business_current_stage = {}
+
+        for biz_id, group in phase_rows.groupby("Business_ID"):
+            best_stage = None
+            best_order = -1
+
+            for _, row in group.iterrows():
+                stage = row["Stage_clean"]
+                status = row["Status_clean"]
+
+                if stage not in stage_order:
+                    continue
+
+                if status in ["completed", "ongoing"]:
+                    order = stage_order[stage]
+                    if order > best_order:
+                        best_order = order
+                        best_stage = stage
+
+            if best_stage:
+                business_current_stage[biz_id] = best_stage
+
+        if not business_current_stage:
+            st.info(f"No active businesses found for {phase_label}.")
+            return
+
+        # ✅ Count businesses per current stage
+        stage_counts = {name: 0 for name in stage_names}
+        for biz_id, current_stage in business_current_stage.items():
+            if current_stage in stage_counts:
+                stage_counts[current_stage] += 1
+
+        total_in_phase = phase_rows["Business_ID"].nunique()
+
+        # ✅ Build chart data
+        stage_data = []
+        for stage_name, color in stages:
+            count = stage_counts.get(stage_name, 0)
+            is_final = (stage_name == stage_names[-1])
+            all_here = (count == total_in_phase)
+
+            stage_data.append({
+                "Stage":        stage_name,
+                "Count":        count,
+                "Color":        color,
+                "AllHere":      all_here,
+                "IsFinal":      is_final,
+                "Total":        total_in_phase,
+            })
+
+        df_stages = pd.DataFrame(stage_data)
+
+        # ✅ Build the chart (HORIZONTAL VERSION)
+        fig = go.Figure()
+
+        # ── Shaded area ──────────────────────────────────────────────
+        fig.add_trace(go.Scatter(
+            x=df_stages["Stage"],
+            y=df_stages["Count"],
+            mode="none",
+            fill="tozeroy",                    # Changed
+            fillcolor="rgba(33, 102, 168, 0.08)",
+            showlegend=False,
+            hoverinfo="skip",
+        ))
+
+        # ── Connecting line ──────────────────────────────────────────
+        fig.add_trace(go.Scatter(
+            x=df_stages["Stage"],
+            y=df_stages["Count"],
+            mode="lines",
+            line=dict(color="#2166a8", width=2.5),
+            showlegend=False,
+            hoverinfo="skip",
+        ))
+
+        # ── One marker per stage ─────────────────────────────────────
+        for _, row in df_stages.iterrows():
+            count = int(row["Count"])
+            all_here = row["AllHere"]
+            is_final = row["IsFinal"]
+
+            if is_final and all_here:
+                marker_color = "#2a9d8f"
+                label = f"✔ {count}"
+            elif all_here:
+                marker_color = row["Color"]
+                label = f"● {count}"
+            elif count == 0:
+                marker_color = "#cbd5e1"
+                label = "0"
+            else:
+                marker_color = row["Color"]
+                label = str(count)
+
+            fig.add_trace(go.Scatter(
+                x=[row["Stage"]],
+                y=[row["Count"]],
+                mode="markers+text",
+                marker=dict(
+                    size=20,
+                    color=marker_color,
+                    line=dict(color="white", width=2),
+                    symbol="circle",
+                ),
+                text=[label],
+                textposition="top center",           # Changed for horizontal
+                textfont=dict(
+                    size=11,
+                    family="Segoe UI",
+                    color="#1a3a5c" if count > 0 else "#94a3b8",
+                ),
+                hovertemplate=(
+                    f"<b>{row['Stage']}</b><br>"
+                    f"Businesses currently here: {count}<br>"
+                    f"Out of {int(row['Total'])} total<br>"
+                    "<extra></extra>"
+                ),
+                showlegend=False,
+            ))
+
+        # ── Total reference line ─────────────────────────────────────
+        if total_in_phase > 0:
+            fig.add_hline(                          # Changed to hline
+                y=total_in_phase,
+                line_dash="dot",
+                line_color="#cbd5e1",
+                line_width=1.5,
+                annotation_text=f"Total: {total_in_phase}",
+                annotation_position="right",
+                annotation_font=dict(size=10, color="#64748b"),
+            )
+
+        fig.update_layout(
+            height=400,                             # Slightly taller for horizontal
+            margin=dict(t=40, b=80, l=60, r=20),   # More bottom margin for stage names
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(family="Segoe UI", size=11, color="#475569"),
+            xaxis=dict(
+                title="Stage",
+                titlefont=dict(size=11, color="#64748b"),
+                tickfont=dict(size=10),
+                categoryorder="array",
+                categoryarray=stage_names,
+                tickangle= -45,                     # Rotate labels if needed
+            ),
+            yaxis=dict(
+                title="Number of Businesses",
+                titlefont=dict(size=11, color="#64748b"),
+                gridcolor="#f1f5f9",
+                tickfont=dict(size=10),
+                range=[0, total_in_phase + 2],
+                dtick=1,
+            ),
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            key=f"progression_{phase_label}"
+        )
+
+        # ✅ Color legend per stage
+        legend_html = "<div style='display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;'>"
+        for stage_name, color in stages:
+            count = stage_counts.get(stage_name, 0)
+            legend_html += (
+                f"<span style='display:flex; align-items:center; gap:4px; "
+                f"font-size:10px; color:#475569; font-family:Segoe UI;'>"
+                f"<span style='width:10px; height:10px; border-radius:50%; "
+                f"background:{color if count > 0 else '#cbd5e1'}; "
+                f"display:inline-block;'></span>"
+                f"{stage_name}: <b>{count}</b></span>"
+            )
+        legend_html += "</div>"
+        st.markdown(legend_html, unsafe_allow_html=True)
+
 
 def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
 
     st.markdown("#### Visual Analysis")
 
-    # ✅ DONUT — Businesses by Province (replaces old status donut + bar chart)
+    # ✅ PROFESSIONAL DONUT — Businesses by Province
     with st.container(border=True):
 
         province_counts = (
             filtered_df.groupby("Province")["Business_ID"]
             .nunique()
-            .reset_index()
+            .reset_index(name="Count")
+            .sort_values("Count", ascending=False)
         )
-        province_counts.columns = ["Province", "Count"]
-        province_counts = province_counts.sort_values(
-            "Count", ascending=False
-        ).reset_index(drop=True)
 
         if province_counts.empty:
             st.info("No province data available.")
         else:
-            # ✅ Assign a distinct color to each province
-            colors = PROVINCE_COLORS[:len(province_counts)]
+            total = province_counts["Count"].sum()
 
-            fig1 = go.Figure(go.Pie(
+            # Premium color palette
+            colors = [
+                "#1e3a8a", "#2563eb", "#3b82f6",
+                "#0f766e", "#14b8a6",
+                "#b45309", "#f59e0b"
+            ][:len(province_counts)]
+
+            fig = go.Figure(go.Pie(
                 labels=province_counts["Province"],
                 values=province_counts["Count"],
-                hole=0.5,
+                hole=0.62,  # Larger hole = more modern look
                 marker=dict(
                     colors=colors,
-                    line=dict(color="white", width=2),
+                    line=dict(color="white", width=3)
                 ),
-                textinfo="label+percent",
-                textfont=dict(size=11, family="Segoe UI"),
+                textinfo="percent",  # Show only % inside
+                textfont=dict(size=13, family="Segoe UI", color="white"),
                 hovertemplate=(
                     "<b>%{label}</b><br>"
                     "Businesses: %{value}<br>"
                     "Share: %{percent}<br>"
                     "<extra></extra>"
                 ),
-                direction="clockwise",
                 sort=True,
+                direction="clockwise",
             ))
 
-            fig1.update_layout(
+            # Center annotation
+            fig.add_annotation(
+                text=f"<b>{total}</b><br>Total",
+                x=0.5, y=0.5,
+                font=dict(size=18, family="Segoe UI", color="#1e293b"),
+                showarrow=False,
+                align="center"
+            )
+
+            fig.update_layout(
                 title=dict(
                     text="Businesses by Province",
-                    font=dict(size=13, family="Segoe UI", color="#1e293b"),
+                    font=dict(size=14, family="Segoe UI", color="#1e293b"),
                     x=0,
                     xanchor="left",
+                    y=0.95
                 ),
-                height=380,
-                margin=dict(t=50, b=20, l=20, r=20),
+                height=400,
+                margin=dict(t=60, b=30, l=20, r=120),  # Space for legend
                 paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(family="Segoe UI", size=11),
+
                 legend=dict(
                     orientation="v",
                     yanchor="middle",
                     y=0.5,
                     xanchor="left",
-                    x=1.02,
-                    font=dict(size=10),
+                    x=1.05,
+                    font=dict(size=12, color="#334155"),
+                    bgcolor="rgba(255,255,255,0.9)",
+                    bordercolor="#e2e8f0",
+                    borderwidth=1,
                 ),
-                annotations=[
-                    dict(
-                        text=f"<b>{province_counts['Count'].sum()}</b><br>Total",
-                        x=0.5, y=0.5,
-                        font=dict(
-                            size=14,
-                            family="Segoe UI",
-                            color="#1a3a5c",
-                        ),
-                        showarrow=False,
-                    )
-                ],
+                showlegend=True,
             )
 
             st.plotly_chart(
-                fig1,
+                fig,
                 use_container_width=True,
                 key=f"province_donut_{phase_label}"
             )
