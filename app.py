@@ -127,7 +127,6 @@ hr {
     font-weight: 600 !important;
     color: #475569 !important;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
