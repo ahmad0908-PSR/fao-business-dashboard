@@ -263,19 +263,7 @@ def render_progression_chart(phase_df, phase_label):
         )
 
         # ✅ Color legend per stage
-        legend_html = "<div style='display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;'>"
-        for stage_name, color in stages:
-            count = stage_counts.get(stage_name, 0)
-            legend_html += (
-                f"<span style='display:flex; align-items:center; gap:4px; "
-                f"font-size:10px; color:#475569; font-family:Segoe UI;'>"
-                f"<span style='width:10px; height:10px; border-radius:50%; "
-                f"background:{color if count > 0 else '#cbd5e1'}; "
-                f"display:inline-block;'></span>"
-                f"{stage_name}: <b>{count}</b></span>"
-            )
-        legend_html += "</div>"
-        st.markdown(legend_html, unsafe_allow_html=True)
+        
 
 
 def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
