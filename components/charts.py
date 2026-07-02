@@ -263,7 +263,7 @@ def render_progression_chart(phase_df, phase_label):
         )
 
         # ✅ Color legend per stage
-        
+
 
 
 def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):

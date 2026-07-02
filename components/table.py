@@ -14,10 +14,6 @@ def transform_phase_data(phase_df):
     return pivot
 
 
-# ==================== REMOVED OLD FUNCTION ====================
-# def transform_capacity_type(...)  ← Deleted (no longer needed)
-
-
 def get_color(status):
     if pd.isna(status):
         return "#f8fafc"
@@ -25,38 +21,36 @@ def get_color(status):
     status = str(status).lower().strip()
 
     if "selected" in status or status == "yes":
-        return "#fef3c7"           # Warm Amber
+        return "#fef3c7"
 
     elif "completed" in status:
-        return "#05df72"           # Fresh Green (lighter & cleaner)
+        return "#05df72"
 
     elif "submitted" in status:
-        return "#bfdbfe"           # Soft Sky Blue
+        return "#bfdbfe"
 
     elif "ongoing" in status:
-        return "#1e40af"           # Professional Deep Blue
+        return "#1e40af"
 
     elif "not applicable" in status or status in ["n/a", "na"]:
-        return "#c7d2fe"           # Soft Indigo / Periwinkle
+        return "#c7d2fe"
 
     elif "not started" in status or status == "no":
-        return "#e2e8f0"           # Slightly darker grey for better contrast
+        return "#e2e8f0"
 
     else:
         return "#f1f5f9"
 
 
 def get_text_color(bg_color):
-    """Return white text for dark backgrounds, dark for light ones."""
-    dark_bg = ["#2166a8"]
+    dark_bg = ["#2166a8", "#1e40af"]
     return "white" if bg_color in dark_bg else "#1e293b"
 
 
 def render_table(filtered_df, business_df, phase_df):
-
     st.subheader("📋 FAO-EFSP-BDS Progress")
 
-    # ✅ Strip Stage_Name whitespace to avoid matching issues
+    # ✅ Strip whitespace from phase data
     phase_df = phase_df.copy()
     phase_df["Stage_Name"] = phase_df["Stage_Name"].str.strip()
     if "Status" in phase_df.columns:
@@ -65,43 +59,94 @@ def render_table(filtered_df, business_df, phase_df):
     # ✅ Pivot phase data to wide format
     phase_wide = transform_phase_data(phase_df)
 
-    # ✅ Merge summary with pivot
-    df = filtered_df.copy()
+    # ✅ Get filtered Business_IDs to respect filters
+    filtered_biz_ids = filtered_df["Business_ID"].unique()
+
+    # ✅ Start from business_df filtered to only filtered businesses
+    df = business_df[business_df["Business_ID"].isin(filtered_biz_ids)].copy()
+
+    # ✅ Pull app_ID from filtered_df if it exists there but not in business_df
+    if "app_ID" not in df.columns and "app_ID" in filtered_df.columns:
+        app_id_map = filtered_df[["Business_ID", "app_ID"]].drop_duplicates()
+        df = df.merge(app_id_map, on="Business_ID", how="left")
+
+    # ✅ Merge with phase pivot — stage status columns only
     df = df.merge(phase_wide, on="Business_ID", how="left")
     df = df.reset_index(drop=True)
 
-    # ✅ Stage map — Updated for new structure
-    # Phase 1 stages
+    # ✅ Clean app_ID
+    if "app_ID" in df.columns:
+        df["app_ID"] = df["app_ID"].fillna("").astype(str).str.strip()
+        df["app_ID"] = df["app_ID"].replace("nan", "")
+
+    # ✅ Stage maps
     phase1_stages = {
-        "Assessment":       ("Assessment",      "pre"),
-        "Ve-Report":        ("Ve-Report",        "pre"),
-        "Selected for BDS": ("Selected for BDS", "pre"),
+        "Assessment":       ("Assessment",       "pre"),
+        "Ve-Report":        ("Ve-Report",         "pre"),
+        "Selected for BDS": ("Selected for BDS",  "pre"),
     }
 
-    # Phase 2 stages — UPDATED
     phase2_stages = {
-        "Dig-Assessment": ("Dig-Assessment", "bds"),
-        "BP-Development": ("BP-Development", "bds"),
-        "Dig-Assessment-Report": ("Dig-Assessment-Report", "bds"),
-        "Virtual-E-Capacity-Building": ("Virtual-E-Capacity-Building", "bds"),  # ✅ hyphens
-        "In-Person-E-Capacity-Building": ("In-Person-E-Capacity-Building", "bds"),  # ✅ hyphens
-        "Coaching": ("Coaching", "bds"),
-        "Monitoring": ("Monitoring", "bds"),
+        "Dig-Assessment":                  ("Dig-Assessment",                  "bds"),
+        "BP-Development":                  ("BP-Development",                   "bds"),
+        "Dig-Assessment-Report":           ("Dig-Assessment-Report",            "bds"),
+        "Virtual-E-Capacity-Building":     ("Virtual-E-Capacity-Building",      "bds"),
+        "In-Person-E-Capacity-Building":   ("In-Person-E-Capacity-Building",    "bds"),
+        "Coaching":                        ("Coaching",                         "bds"),
+        "Monitoring":                      ("Monitoring",                       "bds"),
     }
 
     # ✅ Build tbody rows
     tbody_rows = ""
     for i, row in df.iterrows():
-        biz_id = row.get("Business_ID", "")
 
         tbody_rows += "<tr>"
-        tbody_rows += f"<td style='border:1px solid #ddd; padding:6px; text-align:center; color:#1e293b;'>{i + 1}</td>"
-        tbody_rows += f"<td style='border:1px solid #ddd; padding:6px; min-width:160px; color:#1e293b;'>{row.get('Enterprise_Name', '')}</td>"
-        tbody_rows += f"<td style='border:1px solid #ddd; padding:6px; color:#1e293b;'>{row.get('Province', '')}</td>"
-        tbody_rows += f"<td style='border:1px solid #ddd; padding:6px; color:#1e293b;'>{row.get('Window', '')}</td>"
-        tbody_rows += f"<td style='border:1px solid #ddd; padding:6px; color:#1e293b;'>{row.get('Women_Led', '')}</td>"
 
-        # ✅ Phase 1 stages (unchanged)
+        # Row number
+        tbody_rows += (
+            f"<td style='border:1px solid #ddd; padding:4px 6px; "
+            f"text-align:center; color:#1e293b; width:30px;'>{i + 1}</td>"
+        )
+
+        # app_ID
+        app_id = str(row.get("app_ID", "")).strip()
+        if app_id == "nan":
+            app_id = ""
+        tbody_rows += (
+            f"<td style='border:1px solid #ddd; padding:4px 6px; "
+            f"text-align:center; color:#1e293b; font-weight:500; width:80px;'>"
+            f"{app_id}</td>"
+        )
+
+        # Enterprise Name
+        tbody_rows += (
+            f"<td style='border:1px solid #ddd; padding:4px 6px; "
+            f"color:#1e293b; width:150px; word-wrap:break-word;'>"
+            f"{row.get('Enterprise_Name', '')}</td>"
+        )
+
+        # Province
+        tbody_rows += (
+            f"<td style='border:1px solid #ddd; padding:4px 6px; "
+            f"color:#1e293b; width:70px;'>"
+            f"{row.get('Province', '')}</td>"
+        )
+
+        # Window
+        tbody_rows += (
+            f"<td style='border:1px solid #ddd; padding:4px 6px; "
+            f"color:#1e293b; width:55px;'>"
+            f"{row.get('Window', '')}</td>"
+        )
+
+        # Women Led
+        tbody_rows += (
+            f"<td style='border:1px solid #ddd; padding:4px 6px; "
+            f"color:#1e293b; text-align:center; width:60px;'>"
+            f"{row.get('Women_Led', '')}</td>"
+        )
+
+        # ✅ Phase 1 stages
         for stage_name, (col_name, group) in phase1_stages.items():
             value = row.get(col_name)
             display_value = value
@@ -112,87 +157,100 @@ def render_table(filtered_df, business_df, phase_df):
 
             elif stage_name == "Selected for BDS":
                 val_lower = str(value).strip().lower() if pd.notna(value) else ""
-                if val_lower == "completed":
-                    display_value = "Yes"
-                elif val_lower in ["not started", "nan", ""]:
-                    display_value = "No"
+                display_value = "Yes" if val_lower == "completed" else "No"
 
             color = get_color(display_value if pd.notna(display_value) else "")
             text_color = get_text_color(color)
             cell_text = display_value if pd.notna(display_value) else ""
             tbody_rows += (
                 f"<td style='border:1px solid #ddd; background-color:{color}; "
-                f"color:{text_color}; text-align:center; padding:4px; "
-                f"white-space:nowrap;'>{cell_text}</td>"
+                f"color:{text_color}; text-align:center; padding:3px 4px; "
+                f"font-size:11px; width:80px; word-wrap:break-word;'>{cell_text}</td>"
             )
 
-        # ✅ Phase 2 stages — UPDATED
+        # ✅ Phase 2 stages
         for stage_name, (col_name, group) in phase2_stages.items():
             value = row.get(col_name)
             display_value = value
 
-            # Dig-Assessment-Report: Completed → Submitted to FAO
             if stage_name == "Dig-Assessment-Report":
                 if pd.notna(value) and str(value).strip().lower() == "completed":
                     display_value = "Submitted to FAO"
-
-            # No special capacity type logic needed anymore (it's now separate stages)
 
             color = get_color(str(display_value).strip().lower() if pd.notna(display_value) else "")
             text_color = get_text_color(color)
             cell_text = display_value if pd.notna(display_value) else ""
             tbody_rows += (
                 f"<td style='border:1px solid #ddd; background-color:{color}; "
-                f"color:{text_color}; text-align:center; padding:4px; "
-                f"white-space:nowrap;'>{cell_text}</td>"
+                f"color:{text_color}; text-align:center; padding:3px 4px; "
+                f"font-size:11px; width:80px; word-wrap:break-word;'>{cell_text}</td>"
             )
 
         tbody_rows += "</tr>"
 
-    # ✅ Build full HTML — Updated colspan and headers
+    # ✅ Build full HTML - Improved text display
     html = f"""
-    <div style="max-height:500px; overflow-y:auto; overflow-x:auto; border:1px solid #e2e8f0;">
-      <table style="width:100%; border-collapse:collapse; font-size:12px;">
+    <div style="max-height:520px; overflow-y:auto; overflow-x:auto;
+                border:1px solid #e2e8f0; border-radius:4px;">
+      <table style="border-collapse:collapse; font-size:11.5px; width:100%;">
         <thead>
           <tr>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#2166a8;
-                color:white; z-index:3; padding:8px; border:1px solid #0f2340;">#</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#2166a8;
-                color:white; z-index:3; padding:8px; border:1px solid #0f2340;">Enterprise Name</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#2166a8;
-                color:white; z-index:3; padding:8px; border:1px solid #0f2340;">Province</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#2166a8;
-                color:white; z-index:3; padding:8px; border:1px solid #0f2340;">Window</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#2166a8;
-                color:white; z-index:3; padding:8px; border:1px solid #0f2340;">Women Led</th>
-            <th colspan="3" style="position:sticky; top:0; background-color:#2166a8;
-                color:white; z-index:3; padding:8px; border:1px solid #0f2340;
+            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+                color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
+                width:35px; text-align:center;">#</th>
+            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+                color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
+                width:90px; text-align:center;">App ID</th>
+            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+                color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
+                min-width:180px;">Enterprise Name</th>
+            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+                color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
+                width:80px;">Province</th>
+            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+                color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
+                width:60px;">Window</th>
+            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+                color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
+                width:65px;">Women Led</th>
+            <th colspan="3" style="position:sticky; top:0; background-color:#1a3a5c;
+                color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
                 text-align:center;">Pre-Qualification Verification</th>
-            <th colspan="7" style="position:sticky; top:0; background-color:#2166a8;
-                color:white; z-index:3; padding:8px; border:1px solid #0f2340;
-                text-align:center;">Business Development Support</th>   <!-- Changed from 6 to 7 -->
+            <th colspan="7" style="position:sticky; top:0; background-color:#1a3a5c;
+                color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
+                text-align:center;">Business Development Support</th>
           </tr>
           <tr>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
-                z-index:2; padding:6px; border:1px solid #1a4f8a;">Assessment</th>
+                z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
+                font-size:10px; text-align:center; min-width:85px;">Assessment</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
-                z-index:2; padding:6px; border:1px solid #1a4f8a;">Ve-Report</th>
+                z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
+                font-size:10px; text-align:center; min-width:95px;">Ve-Report</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
-                z-index:2; padding:6px; border:1px solid #1a4f8a;">Selected for BDS</th>
+                z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
+                font-size:10px; text-align:center; min-width:85px;">Selected for BDS</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
-                z-index:2; padding:6px; border:1px solid #1a4f8a;">Dig-Assessment</th>
+                z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
+                font-size:10px; text-align:center; min-width:85px;">Dig-Assessment</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
-                z-index:2; padding:6px; border:1px solid #1a4f8a;">BP-Development</th>
+                z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
+                font-size:10px; text-align:center; min-width:85px;">BP-Development</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
-                z-index:2; padding:6px; border:1px solid #1a4f8a;">Dig-Assessment-Report</th>
+                z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
+                font-size:10px; text-align:center; min-width:110px;">Dig-Assessment-Report</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
-                z-index:2; padding:6px; border:1px solid #1a4f8a;">Virtual E-Capacity</th>   <!-- New -->
+                z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
+                font-size:10px; text-align:center; min-width:100px;">Virtual E-Capacity</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
-                z-index:2; padding:6px; border:1px solid #1a4f8a;">In-Person E-Capacity</th> <!-- New -->
+                z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
+                font-size:10px; text-align:center; min-width:105px;">In-Person E-Capacity</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
-                z-index:2; padding:6px; border:1px solid #1a4f8a;">Coaching</th>
+                z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
+                font-size:10px; text-align:center; min-width:80px;">Coaching</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
-                z-index:2; padding:6px; border:1px solid #1a4f8a;">Monitoring</th>
+                z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
+                font-size:10px; text-align:center; min-width:85px;">Monitoring</th>
           </tr>
         </thead>
         <tbody>
@@ -202,4 +260,4 @@ def render_table(filtered_df, business_df, phase_df):
     </div>
     """
 
-    components.html(html, height=550, scrolling=True)
+    components.html(html, height=580, scrolling=True)
