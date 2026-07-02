@@ -282,29 +282,29 @@ def render_table(filtered_df, business_df, phase_df):
       <table style="border-collapse:collapse; font-size:11.5px; width:100%;">
         <thead>
           <tr>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+            <th rowspan="2" style="position:sticky; top:0; background-color:#2166a8;
                 color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
                 width:35px; text-align:center;">#</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+            <th rowspan="2" style="position:sticky; top:0; background-color:#2166a8;
                 color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
                 width:90px; text-align:center;">App ID</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+            <th rowspan="2" style="position:sticky; top:0; background-color:#2166a8;
                 color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
                 min-width:180px;">Enterprise Name</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+            <th rowspan="2" style="position:sticky; top:0; background-color:#2166a8;
                 color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
                 width:80px;">Province</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+            <th rowspan="2" style="position:sticky; top:0; background-color:#2166a8;
                 color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
                 width:60px;">Window</th>
-            <th rowspan="2" style="position:sticky; top:0; background-color:#1a3a5c;
+            <th rowspan="2" style="position:sticky; top:0; background-color:#2166a8;
                 color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
                 width:65px;">Women Led</th>
             <th colspan="{pre_qual_colspan}" style="position:sticky; top:0;
-                background-color:#1a3a5c; color:white; z-index:3; padding:8px 6px;
+                background-color:#2166a8; color:white; z-index:3; padding:8px 6px;
                 border:1px solid #0f2340; text-align:center;">
                 Pre-Qualification Verification</th>
-            <th colspan="7" style="position:sticky; top:0; background-color:#1a3a5c;
+            <th colspan="7" style="position:sticky; top:0; background-color:#2166a8;
                 color:white; z-index:3; padding:8px 6px; border:1px solid #0f2340;
                 text-align:center;">Business Development Support</th>
           </tr>
