@@ -25,32 +25,32 @@ def get_color(status):
 
     # ✅ Verification_Status values — keyword based
     if "not eligible" in status_lower or "not verified" in status_lower:
-        return "#fee2e2"            # ✅ Soft red — rejected/not eligible
+        return "#f8fafc"            # ✅ Soft red — rejected/not eligible
 
     elif "significant deficien" in status_lower or "redirect" in status_lower:
-        return "#fde68a"            # ✅ Amber — serious issues, redirect
+        return "#f8fafc"            # ✅ Amber — serious issues, redirect
 
     elif "significant condition" in status_lower:
-        return "#fed7aa"            # ✅ Light orange — significant conditions
+        return "#f8fafc"            # ✅ Light orange — significant conditions
 
     elif "verified with condition" in status_lower:
-        return "#d1fae5"            # ✅ Soft green — verified but with conditions
+        return "#f8fafc"            # ✅ Soft green — verified but with conditions
 
     elif "fully verified" in status_lower or status_lower == "verified":
-        return "#05df72"            # ✅ Strong green — fully verified
+        return "#f8fafc"            # ✅ Strong green — fully verified
 
     # ✅ Stage status values
     elif "selected" in status_lower or status_lower == "yes":
-        return "#fef3c7"            # ✅ Amber — Selected / Yes
+        return "#88D49E"            # ✅ Amber — Selected / Yes
 
     elif "completed" in status_lower:
-        return "#05df72"            # ✅ Green — Completed
+        return "#3b82f6"            # ✅ Green — Completed
 
     elif "submitted" in status_lower:
-        return "#bfdbfe"            # ✅ Light blue — Submitted to FAO
+        return "#06D6A0"            # ✅ Light blue — Submitted to FAO
 
     elif "ongoing" in status_lower:
-        return "#1e40af"            # ✅ Deep blue — Ongoing
+        return "#F77F00"            # ✅ Deep blue — Ongoing
 
     elif "not applicable" in status_lower or status_lower in ["n/a", "na"]:
         return "#c7d2fe"            # ✅ Soft indigo — Not Applicable
@@ -318,7 +318,7 @@ def render_table(filtered_df, business_df, phase_df):
             {verification_header}
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
                 z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
-                font-size:10px; text-align:center; min-width:85px;">Selected for BDS</th>
+                font-size:10px; text-align:center; min-width:85px;">Selected for BDS/FAO</th>
             <th style="position:sticky; top:30px; background-color:#2166a8; color:white;
                 z-index:2; padding:6px 4px; border:1px solid #1a4f8a;
                 font-size:10px; text-align:center; min-width:85px;">Dig-Assessment</th>
