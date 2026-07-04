@@ -230,7 +230,14 @@ def render_table(filtered_df, business_df, phase_df):
         # ── Phase 1: Selected for BDS ────────────────────────────────
         value = row.get("Selected for BDS")
         val_lower = str(value).strip().lower() if pd.notna(value) else ""
-        display_value = "Yes" if val_lower == "completed" else "No"
+
+        if val_lower == "completed":
+            display_value = "Yes"
+        elif val_lower == "ongoing":
+            display_value = "Pending/FAO"  # ← NEW
+        else:
+            display_value = "No"  # Not Started or anything else
+
         color = get_color(display_value)
         text_color = get_text_color(color)
         tbody_rows += (

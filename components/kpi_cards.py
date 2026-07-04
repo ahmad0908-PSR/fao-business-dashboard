@@ -4,17 +4,16 @@ import pandas as pd
 
 def count_bds_selection(phase_df, phase_biz_ids):
     """
-    Count businesses Selected vs Not Selected for BDS
-    by looking at Phase_Tracking rows where:
-    - Phase == "Phase 1"
-    - Stage_Name == "selected for bds"
-    - Status == "Completed" → Selected
-    - Status == anything else → Not Selected
+    Count businesses for BDS status:
+    - Completed   → Selected
+    - Ongoing     → Pending/FAO
+    - Not Started + Ongoing → Not Selected (as per new requirement)
     """
-    if phase_df is None or phase_df.empty:
-        return 0, 0
+    if phase_df is None or phase_df.empty or len(phase_biz_ids) == 0:
+        total = len(phase_biz_ids) if phase_biz_ids is not None else 0
+        return 0, 0, total
 
-    # ✅ Filter to Phase 1 "selected for bds" rows only
+    # Filter to Phase 1 "Selected for BDS" rows
     bds_rows = phase_df[
         (phase_df["Phase"].str.strip().str.lower() == "phase 1") &
         (phase_df["Stage_Name"].str.strip().str.lower() == "selected for bds") &
@@ -22,17 +21,21 @@ def count_bds_selection(phase_df, phase_biz_ids):
     ]
 
     if bds_rows.empty:
-        # ✅ If no "selected for bds" rows exist yet, all are not selected
-        return 0, len(phase_biz_ids)
+        return 0, 0, len(phase_biz_ids)
 
+    # Count per status
     selected_count = bds_rows[
         bds_rows["Status"].str.strip().str.lower() == "completed"
     ]["Business_ID"].nunique()
 
+    pending_count = bds_rows[
+        bds_rows["Status"].str.strip().str.lower() == "ongoing"
+    ]["Business_ID"].nunique()
+
+    # Not Selected = total - only the truly Selected ones
     not_selected_count = len(phase_biz_ids) - selected_count
 
-    return selected_count, not_selected_count
-
+    return selected_count, pending_count, not_selected_count
 
 def render_kpis(filtered_df, business_df, phase_df, phase_label="Phase 1"):
     """
@@ -42,20 +45,19 @@ def render_kpis(filtered_df, business_df, phase_df, phase_label="Phase 1"):
     """
     st.markdown("#### Key Performance Indicators")
 
-    phase_biz_ids = filtered_df["Business_ID"].unique()
+    phase_biz_ids = filtered_df["Business_ID"].unique() if filtered_df is not None else []
     total_business = len(phase_biz_ids)
 
-    women_count = filtered_df[filtered_df["Women_Led"] == "Yes"].shape[0]
+    women_count = filtered_df[filtered_df["Women_Led"] == "Yes"].shape[0] if filtered_df is not None else 0
     women_percent = (women_count / total_business * 100) if total_business > 0 else 0
 
-    youth_count = filtered_df[filtered_df["Youth_Inclusive"] == "Yes"].shape[0]
+    youth_count = filtered_df[filtered_df["Youth_Inclusive"] == "Yes"].shape[0] if filtered_df is not None else 0
     youth_percent = (youth_count / total_business * 100) if total_business > 0 else 0
 
     # ── PHASE 1 KPIs ──────────────────────────────────────────────────
     if str(phase_label).strip().lower().startswith("phase 1"):
 
-        # ✅ Phase 1 Avg Completion — calculated from Assessment + Ve-Report only
-        # (2 stages, not 3 — Selected for BDS is excluded from completion %)
+        # Avg Completion (only Assessment + Ve-Report)
         phase1_stages_for_completion = ["Assessment", "Ve-Report"]
 
         if phase_df is not None and not phase_df.empty:
@@ -66,7 +68,6 @@ def render_kpis(filtered_df, business_df, phase_df, phase_label="Phase 1"):
             ]
 
             if not p1_rows.empty:
-                # ✅ Per business: count completed stages out of 2
                 completion_per_biz = []
                 for biz_id in phase_biz_ids:
                     biz_rows = p1_rows[p1_rows["Business_ID"] == biz_id]
@@ -74,14 +75,14 @@ def render_kpis(filtered_df, business_df, phase_df, phase_label="Phase 1"):
                         biz_rows["Status"].str.strip().str.lower() == "completed"
                     ].shape[0]
                     completion_per_biz.append((completed / 2) * 100)
-
                 avg_completion = sum(completion_per_biz) / len(completion_per_biz) if completion_per_biz else 0
             else:
                 avg_completion = 0
         else:
             avg_completion = 0
 
-        selected_count, not_selected_count = count_bds_selection(
+        # Get the three counts
+        selected_count, pending_count, not_selected_count = count_bds_selection(
             phase_df, phase_biz_ids
         )
 
@@ -97,32 +98,28 @@ def render_kpis(filtered_df, business_df, phase_df, phase_label="Phase 1"):
         with col4:
             st.metric("📈 Avg Completion", f"{avg_completion:.1f}%")
 
-        col5, col6 = st.columns(2)
+        # New layout with 3 cards for BDS status
+        col5, col6, col7 = st.columns(3)
         with col5:
             st.metric("✅ Selected for BDS", selected_count)
         with col6:
+            st.metric("⏳ Pending/FAO", pending_count)
+        with col7:
             st.metric("❌ Not Selected for BDS", not_selected_count)
 
     # ── PHASE 2 KPIs ──────────────────────────────────────────────────
     else:
-        # ✅ Phase 2 uses Completion_% from filtered_df as before — unchanged
         avg_completion = (
             filtered_df["Completion_%"].mean()
-            if "Completion_%" in filtered_df.columns else 0
+            if filtered_df is not None and "Completion_%" in filtered_df.columns else 0
         )
 
         filtered_business_df = business_df[
             business_df["Business_ID"].isin(phase_biz_ids)
-        ]
+        ] if business_df is not None else pd.DataFrame()
 
-        total_co = (
-            filtered_business_df["Co_Contribution_USD"].sum()
-            if "Co_Contribution_USD" in filtered_business_df.columns else 0
-        )
-        total_grant = (
-            filtered_business_df["Grant_Requested_USD"].sum()
-            if "Grant_Requested_USD" in filtered_business_df.columns else 0
-        )
+        total_co = filtered_business_df.get("Co_Contribution_USD", pd.Series(0)).sum()
+        total_grant = filtered_business_df.get("Grant_Requested_USD", pd.Series(0)).sum()
 
         col1, col2 = st.columns(2)
         with col1:

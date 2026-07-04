@@ -73,7 +73,7 @@ PHASE2_STAGES = [
 def render_progression_chart(phase_df, phase_label):
     """
     Shows how many businesses are CURRENTLY at each stage.
-    A business is counted at its HIGHEST reached stage only.
+    Only businesses with "Completed" status count as having reached a stage.
     """
 
     stages = PHASE1_STAGES if "1" in phase_label else PHASE2_STAGES
@@ -83,7 +83,6 @@ def render_progression_chart(phase_df, phase_label):
 
         st.markdown(f"#### Stage Progression — {phase_label}")
 
-        # ✅ Filter to this phase only
         phase_rows = phase_df[
             phase_df["Phase"].str.strip().str.lower() == phase_label.lower()
         ].copy()
@@ -95,10 +94,9 @@ def render_progression_chart(phase_df, phase_label):
         phase_rows["Stage_clean"]  = phase_rows["Stage_Name"].str.strip()
         phase_rows["Status_clean"] = phase_rows["Status"].str.strip().str.lower()
 
-        # ✅ Stage order map
         stage_order = {name: i for i, name in enumerate(stage_names)}
 
-        # ✅ For each business, find its CURRENT stage
+        # ✅ Improved logic: only "completed" counts as reaching the stage
         business_current_stage = {}
 
         for biz_id, group in phase_rows.groupby("Business_ID"):
@@ -112,7 +110,7 @@ def render_progression_chart(phase_df, phase_label):
                 if stage not in stage_order:
                     continue
 
-                if status in ["completed", "ongoing"]:
+                if status == "completed":          # ← Only completed counts
                     order = stage_order[stage]
                     if order > best_order:
                         best_order = order
@@ -125,7 +123,6 @@ def render_progression_chart(phase_df, phase_label):
             st.info(f"No active businesses found for {phase_label}.")
             return
 
-        # ✅ Count businesses per current stage
         stage_counts = {name: 0 for name in stage_names}
         for biz_id, current_stage in business_current_stage.items():
             if current_stage in stage_counts:
@@ -133,7 +130,7 @@ def render_progression_chart(phase_df, phase_label):
 
         total_in_phase = phase_rows["Business_ID"].nunique()
 
-        # ✅ Build chart data
+        # Build chart data...
         stage_data = []
         for stage_name, color in stages:
             count = stage_counts.get(stage_name, 0)
@@ -151,21 +148,19 @@ def render_progression_chart(phase_df, phase_label):
 
         df_stages = pd.DataFrame(stage_data)
 
-        # ✅ Build the chart (HORIZONTAL VERSION)
+        # The rest of the chart code remains the same...
         fig = go.Figure()
 
-        # ── Shaded area ──────────────────────────────────────────────
         fig.add_trace(go.Scatter(
             x=df_stages["Stage"],
             y=df_stages["Count"],
             mode="none",
-            fill="tozeroy",                    # Changed
+            fill="tozeroy",
             fillcolor="rgba(33, 102, 168, 0.08)",
             showlegend=False,
             hoverinfo="skip",
         ))
 
-        # ── Connecting line ──────────────────────────────────────────
         fig.add_trace(go.Scatter(
             x=df_stages["Stage"],
             y=df_stages["Count"],
@@ -175,7 +170,6 @@ def render_progression_chart(phase_df, phase_label):
             hoverinfo="skip",
         ))
 
-        # ── One marker per stage ─────────────────────────────────────
         for _, row in df_stages.iterrows():
             count = int(row["Count"])
             all_here = row["AllHere"]
@@ -198,31 +192,16 @@ def render_progression_chart(phase_df, phase_label):
                 x=[row["Stage"]],
                 y=[row["Count"]],
                 mode="markers+text",
-                marker=dict(
-                    size=20,
-                    color=marker_color,
-                    line=dict(color="white", width=2),
-                    symbol="circle",
-                ),
+                marker=dict(size=20, color=marker_color, line=dict(color="white", width=2), symbol="circle"),
                 text=[label],
-                textposition="top center",           # Changed for horizontal
-                textfont=dict(
-                    size=11,
-                    family="Segoe UI",
-                    color="#1a3a5c" if count > 0 else "#94a3b8",
-                ),
-                hovertemplate=(
-                    f"<b>{row['Stage']}</b><br>"
-                    f"Businesses currently here: {count}<br>"
-                    f"Out of {int(row['Total'])} total<br>"
-                    "<extra></extra>"
-                ),
+                textposition="top center",
+                textfont=dict(size=11, family="Segoe UI", color="#1a3a5c" if count > 0 else "#94a3b8"),
+                hovertemplate=f"<b>{row['Stage']}</b><br>Businesses currently here: {count}<br>Out of {int(row['Total'])} total<br><extra></extra>",
                 showlegend=False,
             ))
 
-        # ── Total reference line ─────────────────────────────────────
         if total_in_phase > 0:
-            fig.add_hline(                          # Changed to hline
+            fig.add_hline(
                 y=total_in_phase,
                 line_dash="dot",
                 line_color="#cbd5e1",
@@ -233,8 +212,8 @@ def render_progression_chart(phase_df, phase_label):
             )
 
         fig.update_layout(
-            height=400,                             # Slightly taller for horizontal
-            margin=dict(t=40, b=80, l=60, r=20),   # More bottom margin for stage names
+            height=400,
+            margin=dict(t=40, b=80, l=60, r=20),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             font=dict(family="Segoe UI", size=11, color="#475569"),
@@ -244,7 +223,7 @@ def render_progression_chart(phase_df, phase_label):
                 tickfont=dict(size=10),
                 categoryorder="array",
                 categoryarray=stage_names,
-                tickangle= -45,                     # Rotate labels if needed
+                tickangle=-45,
             ),
             yaxis=dict(
                 title="Number of Businesses",
@@ -256,12 +235,7 @@ def render_progression_chart(phase_df, phase_label):
             ),
         )
 
-        st.plotly_chart(
-            fig,
-            use_container_width=True,
-            key=f"progression_{phase_label}"
-        )
-
+        st.plotly_chart(fig, use_container_width=True, key=f"progression_{phase_label}")
         # ✅ Color legend per stage
 
 
