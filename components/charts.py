@@ -375,7 +375,7 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
                     "Women Led":       women_yes,
                     "Not Women Led":   total - women_yes,
                     "Youth Inclusive": youth_yes,
-                    "Not Youth":       total - youth_yes,
+                    "Not Youth Inclusive":       total - youth_yes,
                 })
 
             stacked_df = pd.DataFrame(records).sort_values(
@@ -389,7 +389,7 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
                 x=stacked_df["Women Led"],
                 name="Women Led",
                 orientation="h",
-                marker_color="#2f7aa1",
+                marker_color="#2166a8",
                 text=stacked_df["Women Led"],
                 textposition="inside",
                 textfont=dict(size=10, color="white"),
@@ -400,7 +400,7 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
                 x=stacked_df["Not Women Led"],
                 name="Not Women Led",
                 orientation="h",
-                marker_color="#cbd5e1",
+                marker_color="#bfdbfe",
                 text=stacked_df["Not Women Led"],
                 textposition="inside",
                 textfont=dict(size=10, color="black"),
@@ -411,7 +411,7 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
                 x=stacked_df["Youth Inclusive"],
                 name="Youth Inclusive",
                 orientation="h",
-                marker_color="#4a9fc7",
+                marker_color="#2a9d8f",
                 text=stacked_df["Youth Inclusive"],
                 textposition="inside",
                 textfont=dict(size=10, color="white"),
@@ -420,11 +420,11 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
 
             fig2.add_trace(go.Bar(
                 y=stacked_df["Province"],
-                x=stacked_df["Not Youth"],
-                name="Not Youth",
+                x=stacked_df["Not Youth Inclusive"],
+                name="Not Youth Inclusive",
                 orientation="h",
-                marker_color="#e2e8f0",
-                text=stacked_df["Not Youth"],
+                marker_color="#a7f3d0",
+                text=stacked_df["Not Youth Inclusive"],
                 textposition="inside",
                 textfont=dict(size=10, color="black"),
                 offsetgroup="Youth",
