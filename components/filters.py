@@ -26,10 +26,26 @@ def render_filters(summary_df, business_df):
         youth_options = ["All", "Yes", "No"]
         selected_youth = st.selectbox("Youth Inclusive", youth_options)
 
-    # ✅ Phase
-    with col4:
-        phases = ["All"] + sorted(summary_df["Phase_Current"].dropna().unique().tolist())
-        selected_phase = st.selectbox("Phase", phases)
+        # ✅ Phase - Custom Display Names
+        with col4:
+            # Get unique phases from data
+            raw_phases = ["All"] + sorted(summary_df["Phase_Current"].dropna().unique().tolist())
+
+            # Map internal values to nice display names
+            phase_display_map = {
+                "All": "All",
+                "Phase 1": "Pre-Qualification Verification",
+                "Phase 2": "Business Development Support"
+            }
+
+            # Create display options
+            phase_options = [phase_display_map.get(p, p) for p in raw_phases]
+
+            # Show nice names to user
+            selected_display = st.selectbox("Phase", phase_options)
+
+            # Map back to internal value for filtering
+            selected_phase = next((k for k, v in phase_display_map.items() if v == selected_display), selected_display)
 
     # ✅ Status
     with col5:
