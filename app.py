@@ -182,7 +182,7 @@ with phase_col1:
 # ── PHASE 2 ──
 with phase_col2:
     with st.container(border=True):
-        st.markdown("### Phase 2 — Business Development")
+        st.markdown("### Phase 2 — Business Development Support")
         st.caption("Capacity building & grant utilization stages")
         st.divider()
         if phase2_df.empty:
