@@ -203,21 +203,75 @@ st.divider()
 st.markdown("### Business Profile Lookup")
 st.caption("Search and view detailed profile for any business")
 
+# ✅ Build business list from summary_df
+business_list = summary_df[["Business_ID", "Enterprise_Name"]].drop_duplicates().reset_index(drop=True)
+
+# ✅ Add app_ID if available in summary_df or business_df
+if "app_ID" in summary_df.columns:
+    business_list = summary_df[["Business_ID", "Enterprise_Name", "app_ID"]].drop_duplicates().reset_index(drop=True)
+elif "app_ID" in business_df.columns:
+    app_id_map = business_df[["Business_ID", "app_ID"]].drop_duplicates()
+    business_list = business_list.merge(app_id_map, on="Business_ID", how="left")
+
+# ✅ Clean up app_ID
+if "app_ID" in business_list.columns:
+    business_list["app_ID"] = business_list["app_ID"].fillna("").astype(str).str.strip().replace("nan", "")
+
 profile_col1, profile_col2 = st.columns([3, 1])
 
-business_list = summary_df[["Business_ID", "Enterprise_Name"]].drop_duplicates()
+with profile_col1:
+    search_query = st.text_input(
+        "Search business",
+        placeholder="Type any part of name or App ID...",
+        label_visibility="collapsed"
+    )
 
-selected_name = profile_col1.selectbox(
-    "Select Business",
-    business_list["Enterprise_Name"],
-    label_visibility="collapsed"
-)
+    query = search_query.strip().lower()
 
-selected_business_id = business_list[
-    business_list["Enterprise_Name"] == selected_name
-]["Business_ID"].values[0]
+    if query:
+        # ✅ Search in Enterprise_Name
+        name_mask = business_list["Enterprise_Name"].str.lower().str.contains(
+            query, na=False, regex=False      # regex=False avoids special char issues
+        )
 
-if profile_col2.button("View Profile →"):
+        # ✅ Search in app_ID if available
+        if "app_ID" in business_list.columns:
+            id_mask = business_list["app_ID"].str.lower().str.contains(
+                query, na=False, regex=False
+            )
+            # ✅ Search in Business_ID as well
+            biz_id_mask = business_list["Business_ID"].str.lower().str.contains(
+                query, na=False, regex=False
+            )
+            combined_mask = name_mask | id_mask | biz_id_mask
+        else:
+            biz_id_mask = business_list["Business_ID"].str.lower().str.contains(
+                query, na=False, regex=False
+            )
+            combined_mask = name_mask | biz_id_mask
+
+        filtered_list = business_list[combined_mask].reset_index(drop=True)
+    else:
+        filtered_list = business_list
+
+    if filtered_list.empty:
+        st.warning(f"No business found matching '{search_query}' — try a shorter keyword")
+        selected_name = None
+    else:
+        selected_name = st.selectbox(
+            "Select Business",
+            filtered_list["Enterprise_Name"],
+            label_visibility="collapsed"
+        )
+
+with profile_col2:
+    st.markdown("<br>", unsafe_allow_html=True)
+    view_clicked = st.button("View Profile →")
+
+if selected_name and view_clicked:
+    selected_business_id = business_list[
+        business_list["Enterprise_Name"] == selected_name
+    ]["Business_ID"].values[0]
     from components.business_detail import render_business_detail
     render_business_detail(selected_business_id, business_df, phase_df, summary_df)
     st.stop()
