@@ -51,15 +51,36 @@ def render_kpis(filtered_df, business_df, phase_df, phase_label="Phase 1"):
     youth_count = filtered_df[filtered_df["Youth_Inclusive"] == "Yes"].shape[0]
     youth_percent = (youth_count / total_business * 100) if total_business > 0 else 0
 
-    avg_completion = (
-        filtered_df["Completion_%"].mean()
-        if "Completion_%" in filtered_df.columns else 0
-    )
-
     # ── PHASE 1 KPIs ──────────────────────────────────────────────────
     if str(phase_label).strip().lower().startswith("phase 1"):
 
-        # ✅ Pass phase_df and the business IDs in this phase
+        # ✅ Phase 1 Avg Completion — calculated from Assessment + Ve-Report only
+        # (2 stages, not 3 — Selected for BDS is excluded from completion %)
+        phase1_stages_for_completion = ["Assessment", "Ve-Report"]
+
+        if phase_df is not None and not phase_df.empty:
+            p1_rows = phase_df[
+                (phase_df["Phase"].str.strip() == "Phase 1") &
+                (phase_df["Stage_Name"].str.strip().isin(phase1_stages_for_completion)) &
+                (phase_df["Business_ID"].isin(phase_biz_ids))
+            ]
+
+            if not p1_rows.empty:
+                # ✅ Per business: count completed stages out of 2
+                completion_per_biz = []
+                for biz_id in phase_biz_ids:
+                    biz_rows = p1_rows[p1_rows["Business_ID"] == biz_id]
+                    completed = biz_rows[
+                        biz_rows["Status"].str.strip().str.lower() == "completed"
+                    ].shape[0]
+                    completion_per_biz.append((completed / 2) * 100)
+
+                avg_completion = sum(completion_per_biz) / len(completion_per_biz) if completion_per_biz else 0
+            else:
+                avg_completion = 0
+        else:
+            avg_completion = 0
+
         selected_count, not_selected_count = count_bds_selection(
             phase_df, phase_biz_ids
         )
@@ -84,11 +105,16 @@ def render_kpis(filtered_df, business_df, phase_df, phase_label="Phase 1"):
 
     # ── PHASE 2 KPIs ──────────────────────────────────────────────────
     else:
+        # ✅ Phase 2 uses Completion_% from filtered_df as before — unchanged
+        avg_completion = (
+            filtered_df["Completion_%"].mean()
+            if "Completion_%" in filtered_df.columns else 0
+        )
+
         filtered_business_df = business_df[
             business_df["Business_ID"].isin(phase_biz_ids)
         ]
 
-        # ✅ Safe column access
         total_co = (
             filtered_business_df["Co_Contribution_USD"].sum()
             if "Co_Contribution_USD" in filtered_business_df.columns else 0
