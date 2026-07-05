@@ -4,16 +4,19 @@ import pandas as pd
 
 def count_bds_selection(phase_df, phase_biz_ids):
     """
-    Count businesses for BDS status:
-    - Completed   → Selected
-    - Ongoing     → Pending/FAO
-    - Not Started + Ongoing → Not Selected (as per new requirement)
-    """
-    if phase_df is None or phase_df.empty or len(phase_biz_ids) == 0:
-        total = len(phase_biz_ids) if phase_biz_ids is not None else 0
-        return 0, 0, total
+    Count businesses for Selected for BDS stage.
 
-    # Filter to Phase 1 "Selected for BDS" rows
+    Status mapping:
+    - completed          → Selected
+    - ongoing            → Pending/FAO
+    - not selected/fao   → Not Selected
+    - all other statuses or missing records → ignored
+    """
+
+    if phase_df is None or phase_df.empty or len(phase_biz_ids) == 0:
+        return 0, 0, 0
+
+    # Filter Phase 1 → Selected for BDS
     bds_rows = phase_df[
         (phase_df["Phase"].str.strip().str.lower() == "phase 1") &
         (phase_df["Stage_Name"].str.strip().str.lower() == "selected for bds") &
@@ -21,19 +24,21 @@ def count_bds_selection(phase_df, phase_biz_ids):
     ]
 
     if bds_rows.empty:
-        return 0, 0, len(phase_biz_ids)
+        return 0, 0, 0
 
-    # Count per status
+    status_series = bds_rows["Status"].fillna("").str.strip().str.lower()
+
     selected_count = bds_rows[
-        bds_rows["Status"].str.strip().str.lower() == "completed"
+        status_series == "completed"
     ]["Business_ID"].nunique()
 
     pending_count = bds_rows[
-        bds_rows["Status"].str.strip().str.lower() == "ongoing"
+        status_series == "ongoing"
     ]["Business_ID"].nunique()
 
-    # Not Selected = total - only the truly Selected ones
-    not_selected_count = len(phase_biz_ids) - selected_count
+    not_selected_count = bds_rows[
+        status_series == "not selected/fao"
+    ]["Business_ID"].nunique()
 
     return selected_count, pending_count, not_selected_count
 
