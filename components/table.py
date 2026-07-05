@@ -58,11 +58,15 @@ def get_color(status):
     elif "pending" in status_lower:
         return "#fef9c3"            # ✅ Soft yellow — Pending
 
-    elif "not started" in status_lower or status_lower == "no":
-        return "#e2e8f0"            # ✅ Light grey — Not Started / No
+    # ✅ DISTINGUISH "No" and "Not Started"
+    elif status_lower == "no":
+        return "#f87171"  # ✅ Red for "No"
+
+    elif "not started" in status_lower:
+        return "#e2e8f0"  # ✅ Light grey for "Not Started"
 
     else:
-        return "#f1f5f9"            # ✅ Default — unknown value
+        return "#f1f5f9"  # ✅ Default — unknown value
 
 
 def get_text_color(bg_color):

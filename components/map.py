@@ -1,45 +1,45 @@
 import streamlit as st
-import plotly.express as px
 import plotly.graph_objects as go
+import plotly.express as px
 import pandas as pd
+import math
 
 
-# ✅ Accurate province centroids for all 34 Afghanistan provinces
 PROVINCE_CENTROIDS = {
-    "Badakhshan":  (70.8,  37.1),
-    "Badghis":     (63.7,  35.2),
-    "Baghlan":     (68.7,  36.1),
-    "Balkh":       (67.0,  36.8),
-    "Bamyan":      (67.8,  34.8),
-    "Daikundi":    (66.4,  33.7),
-    "Farah":       (62.4,  32.4),
-    "Faryab":      (64.9,  36.1),
-    "Ghazni":      (68.4,  33.5),
-    "Ghor":        (64.9,  34.1),
-    "Helmand":     (64.2,  31.3),
-    "Herat":       (62.2,  34.4),
-    "Jawzjan":     (66.4,  36.9),
-    "Kabul":       (69.2,  34.5),
-    "Kandahar":    (65.7,  31.6),
-    "Kapisa":      (69.6,  34.9),
-    "Khost":       (69.9,  33.3),
-    "Kunar":       (71.1,  34.8),
-    "Kunduz":      (68.9,  36.7),
-    "Laghman":     (70.1,  34.7),
-    "Logar":       (69.1,  34.0),
-    "Nangarhar":   (70.6,  34.2),
-    "Nimroz":      (62.0,  30.9),
-    "Nuristan":    (70.7,  35.4),
-    "Paktia":      (69.4,  33.7),
-    "Paktika":     (69.3,  32.3),
-    "Panjshir":    (69.6,  35.6),
-    "Parwan":      (68.8,  35.1),
-    "Samangan":    (67.9,  36.2),
-    "Sar-e Pol":   (65.9,  36.2),
-    "Takhar":      (69.5,  36.7),
-    "Uruzgan":     (66.6,  32.9),
-    "Wardak":      (68.2,  34.1),
-    "Zabul":       (67.2,  32.1),
+    "Badakhshan":  (70.8, 37.1),
+    "Badghis":     (63.7, 35.2),
+    "Baghlan":     (68.7, 36.1),
+    "Balkh":       (67.0, 36.8),
+    "Bamyan":      (67.8, 34.8),
+    "Daikundi":    (66.4, 33.7),
+    "Farah":       (62.4, 32.4),
+    "Faryab":      (64.9, 36.1),
+    "Ghazni":      (68.4, 33.5),
+    "Ghor":        (64.9, 34.1),
+    "Helmand":     (64.2, 31.3),
+    "Herat":       (62.2, 34.4),
+    "Jawzjan":     (66.4, 36.9),
+    "Kabul":       (69.2, 34.5),
+    "Kandahar":    (65.7, 31.6),
+    "Kapisa":      (69.6, 34.9),
+    "Khost":       (69.9, 33.3),
+    "Kunar":       (71.1, 34.8),
+    "Kunduz":      (68.9, 36.7),
+    "Laghman":     (70.1, 34.7),
+    "Logar":       (69.1, 34.0),
+    "Nangarhar":   (70.6, 34.2),
+    "Nimroz":      (62.0, 30.9),
+    "Nuristan":    (70.7, 35.4),
+    "Paktia":      (69.4, 33.7),
+    "Paktika":     (69.3, 32.3),
+    "Panjshir":    (69.6, 35.6),
+    "Parwan":      (68.8, 35.1),
+    "Samangan":    (67.9, 36.2),
+    "Sar-e Pol":   (65.9, 36.2),
+    "Takhar":      (69.5, 36.7),
+    "Uruzgan":     (66.6, 32.9),
+    "Wardak":      (68.2, 34.1),
+    "Zabul":       (67.2, 32.1),
 }
 
 
@@ -60,26 +60,35 @@ def render_map(filtered_df):
         st.info("No province data to display.")
         return
 
-    # ✅ Add lat/lon from centroids
+    # ✅ Add coordinates
     province_counts["lon"] = province_counts["Province"].map(
         lambda x: PROVINCE_CENTROIDS.get(x, (None, None))[0]
     )
     province_counts["lat"] = province_counts["Province"].map(
         lambda x: PROVINCE_CENTROIDS.get(x, (None, None))[1]
     )
-
-    # ✅ Drop any provinces without coordinates
     province_counts = province_counts.dropna(subset=["lat", "lon"])
 
     if province_counts.empty:
-        st.warning("Province names in your data don't match the map. "
-                   f"Found: {filtered_df['Province'].unique().tolist()}")
+        st.warning(f"Province names don't match map data: {filtered_df['Province'].unique().tolist()}")
         return
 
-    # ✅ Build bubble map
+    max_count = province_counts["Total Businesses"].max()
+
+    # ✅ Normalize bubble size — cap at 30px max to prevent overlap
+    def scale_size(count, max_val):
+        if max_val == 0:
+            return 10
+        # ✅ Square root scaling — reduces size disparity between large/small values
+        return max(8, min(30, int(8 + (math.sqrt(count) / math.sqrt(max_val)) * 22)))
+
+    province_counts["bubble_size"] = province_counts["Total Businesses"].apply(
+        lambda x: scale_size(x, max_count)
+    )
+
     fig = go.Figure()
 
-    # Background: all provinces as faint grey dots
+    # ── Background grey dots for all provinces ───────────────────────
     all_provinces = pd.DataFrame([
         {"Province": p, "lon": v[0], "lat": v[1]}
         for p, v in PROVINCE_CENTROIDS.items()
@@ -89,20 +98,13 @@ def render_map(filtered_df):
         lon=all_provinces["lon"],
         lat=all_provinces["lat"],
         text=all_provinces["Province"],
-        mode="markers+text",
-        marker=dict(
-            size=6,
-            color="#cbd5e1",
-            line=dict(width=0),
-        ),
-        textfont=dict(size=7, color="#94a3b8"),
-        textposition="top center",
+        mode="markers",
+        marker=dict(size=5, color="#e2e8f0", line=dict(width=0)),
         hoverinfo="text",
-        name="All Provinces",
         showlegend=False,
     ))
 
-    # Active provinces: colored bubbles sized by business count
+    # ── Active province markers ───────────────────────────────────────
     fig.add_trace(go.Scattergeo(
         lon=province_counts["lon"],
         lat=province_counts["lat"],
@@ -110,23 +112,26 @@ def render_map(filtered_df):
         customdata=province_counts["Total Businesses"],
         mode="markers+text",
         marker=dict(
-            size=province_counts["Total Businesses"] * 14 + 16,
+            size=province_counts["bubble_size"],   # ✅ capped scaled size
             color=province_counts["Total Businesses"],
             colorscale=[
-                [0.0, "#7ec8e3"],
-                [0.5, "#2166a8"],
+                [0.0, "#93c5fd"],
+                [0.4, "#2166a8"],
                 [1.0, "#1a3a5c"],
             ],
             showscale=True,
             colorbar=dict(
-                title="Businesses",
-                thickness=12,
-                len=0.5,
-                tickfont=dict(size=10, family="Segoe UI"),
-                titlefont=dict(size=11, family="Segoe UI"),
+                title=dict(
+                    text="Businesses",
+                    font=dict(size=11, family="Segoe UI"),
+                ),
+                thickness=10,
+                len=0.4,
+                tickfont=dict(size=9, family="Segoe UI"),
+                x=1.0,
             ),
             line=dict(width=1.5, color="white"),
-            opacity=0.85,
+            opacity=0.9,
         ),
         textfont=dict(size=8, color="#1e293b", family="Segoe UI"),
         textposition="top center",
@@ -135,7 +140,6 @@ def render_map(filtered_df):
             "Businesses: %{customdata}<br>"
             "<extra></extra>"
         ),
-        name="Active Provinces",
         showlegend=False,
     ))
 
@@ -146,18 +150,20 @@ def render_map(filtered_df):
         showland=True,
         landcolor="#f8fafc",
         showocean=True,
-        oceancolor="#e8f4f8",
+        oceancolor="#eff6ff",
         showlakes=False,
         showrivers=False,
         showcountries=True,
         countrycolor="#cbd5e1",
-        countrywidth=1,
+        countrywidth=1.2,
         showframe=False,
         bgcolor="rgba(0,0,0,0)",
+        showsubunits=True,
+        subunitcolor="#e2e8f0",
     )
 
     fig.update_layout(
-        margin=dict(t=0, b=0, l=0, r=0),
+        margin=dict(t=10, b=0, l=0, r=0),
         height=420,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
@@ -165,9 +171,10 @@ def render_map(filtered_df):
         geo=dict(bgcolor="rgba(0,0,0,0)"),
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    # ✅ Map — full width
+    st.plotly_chart(fig, use_container_width=True, key="geo_map")
 
-    # ✅ Province breakdown table
+    # ✅ Province breakdown expander
     with st.expander("View Province Breakdown", expanded=False):
         display_df = province_counts[["Province", "Total Businesses"]].sort_values(
             "Total Businesses", ascending=False

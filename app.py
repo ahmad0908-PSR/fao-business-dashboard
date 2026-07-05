@@ -4,7 +4,7 @@ from utils.data_loader import load_data, build_phase_summary
 from components.header import render_header
 from components.filters import render_filters
 from components.kpi_cards import render_kpis
-from components.charts import render_charts, render_progression_chart  # ✅ single clean import
+from components.charts import render_charts, render_progression_chart, render_businesses_overview  # ✅ single clean import
 from components.map import render_map
 from components.table import render_table
 from components.footer import render_footer
@@ -148,6 +148,13 @@ if st.button("🔄 Refresh Data"):
 
 # ✅ FILTERS
 filtered_df = render_filters(summary_df, business_df)
+st.divider()
+
+# ✅ BUSINESSES OVERVIEW — KPI + bar chart (below filters, above FAO chart)
+st.markdown("### FAO Assigned Businesses")
+st.caption("Total businesses Assigned by FAO")
+with st.container(border=True):
+    render_businesses_overview(business_df, filtered_df)
 st.divider()
 
 # ✅ MAP

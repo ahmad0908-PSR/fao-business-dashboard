@@ -444,3 +444,86 @@ def render_charts(filtered_df, phase_df=None, phase_label="Phase 1"):
                 use_container_width=True,
                 key=f"stacked_{phase_label}"
             )
+
+def render_businesses_overview(business_df, filtered_df):
+    """
+    KPI cards + horizontal bar chart for businesses overview.
+    """
+    # ✅ Filter to only currently filtered businesses
+    filtered_biz_ids = filtered_df["Business_ID"].unique()
+    filtered_biz = business_df[
+        business_df["Business_ID"].isin(filtered_biz_ids)
+    ].copy()
+
+    total = len(filtered_biz)
+
+
+    # ✅ KPI Cards — centered with 2 columns only
+    kpi1, kpi2 = st.columns(2)
+
+    with kpi1:
+        st.metric("🏢 Total Businesses", total)
+
+    with kpi2:
+        province_count = filtered_biz["Province"].dropna().nunique()
+        st.metric("📍 Provinces Covered", province_count)
+
+    st.divider()
+
+    # ✅ Bar chart — businesses per province
+    if "Province" not in filtered_biz.columns or filtered_biz.empty:
+        st.info("No province data available.")
+        return
+
+    province_counts = (
+        filtered_biz.groupby("Province")["Business_ID"]
+        .nunique()
+        .reset_index(name="Count")
+        .sort_values("Count", ascending=True)
+    )
+
+    if province_counts.empty:
+        st.info("No province data to display.")
+        return
+
+    # ✅ Colors from your palette
+    bar_colors = PROVINCE_COLORS[:len(province_counts)]
+
+    fig = go.Figure(go.Bar(
+        x=province_counts["Count"],
+        y=province_counts["Province"],
+        orientation="h",
+        marker=dict(
+            color=bar_colors,
+            line=dict(color="white", width=0.5),
+        ),
+        text=province_counts["Count"],
+        textposition="outside",
+        textfont=dict(size=11, family="Segoe UI", color="#1e293b"),
+        hovertemplate="<b>%{y}</b><br>Businesses: %{x}<br><extra></extra>",
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text="Businesses in Businesses_DB by Province",
+            font=dict(size=14, family="Segoe UI", color="#1e293b"),
+            x=0,
+        ),
+        height=max(220, len(province_counts) * 25 + 60),
+        margin=dict(t=50, b=30, l=10, r=60),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Segoe UI", size=11),
+        xaxis=dict(
+            title="Number of Businesses",
+            gridcolor="#f1f5f9",
+            tickfont=dict(size=10),
+        ),
+        yaxis=dict(
+            title="",
+            tickfont=dict(size=11),
+            automargin=True,
+        ),
+    )
+
+    st.plotly_chart(fig, use_container_width=True, key="businesses_by_province_overview")
