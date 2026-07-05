@@ -505,7 +505,7 @@ def render_businesses_overview(business_df, filtered_df):
 
     fig.update_layout(
         title=dict(
-            text="Businesses in Businesses_DB by Province",
+            text="Total Number of Businesses Assigned by Provinces ",
             font=dict(size=14, family="Segoe UI", color="#1e293b"),
             x=0,
         ),
