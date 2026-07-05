@@ -39,6 +39,10 @@ def get_color(status):
     elif "fully verified" in status_lower or status_lower == "verified":
         return "#f8fafc"            # ✅ Strong green — fully verified
 
+    # 🔴 NEW RULE: Not Selected / FAO
+    elif "not selected" in status_lower:
+        return "#ef4444"            # 🔴 Red — Not Selected / FAO
+
     # ✅ Stage status values
     elif "selected" in status_lower or status_lower == "yes":
         return "#88D49E"            # ✅ Amber — Selected / Yes
@@ -237,10 +241,18 @@ def render_table(filtered_df, business_df, phase_df):
 
         if val_lower == "completed":
             display_value = "Yes"
+
         elif val_lower == "ongoing":
-            display_value = "Pending/FAO"  # ← NEW
+            display_value = "Pending/FAO"
+
+        elif val_lower in ["not selected/fao", "not selected"]:
+            display_value = "Not Selected"
+
+        elif val_lower == "":
+            display_value = ""  # no record yet in Phase_Tracking
+
         else:
-            display_value = "No"  # Not Started or anything else
+            display_value = "No"
 
         color = get_color(display_value)
         text_color = get_text_color(color)
