@@ -26,14 +26,25 @@ html, body, [class*="css"] {
     background-color: #f1f5f9;
 }
 
-/* ── Phase container box ── */
+/* ── Bordered Containers ───────────────────────────────────────────── */
 [data-testid="stVerticalBlockBorderWrapper"] {
     background-color: #ffffff !important;
-    border-radius: 8px !important;
-    border: 1px solid #e2e8f0 !important;
-    border-top: 3px solid #2166a8 !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
-    padding: 16px !important;
+    border-radius: 10px !important;
+    border: 1px solid #dbe4ee !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+    padding: 14px !important;
+    margin-bottom: 12px !important;
+}
+
+/* Remove borders from nested containers */
+[data-testid="stVerticalBlockBorderWrapper"]
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border: none !important;
+    border-top: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
 }
 
 /* ── KPI metric cards ── */
