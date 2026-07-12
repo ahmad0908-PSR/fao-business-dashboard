@@ -49,7 +49,7 @@ html, body, [class*="css"] {
 
 /* ── KPI metric cards ── */
 [data-testid="stMetric"] {
-    background-color: #f8fafc !important;
+    background-color: #2369A4 !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 6px !important;
     padding: 10px 12px !important;
@@ -62,7 +62,7 @@ html, body, [class*="css"] {
     font-weight: 600 !important;
     text-transform: none !important;
     letter-spacing: 0 !important;
-    color: #64748b !important;
+    color: #ffffff !important;
     white-space: normal !important;
     overflow: visible !important;
     text-overflow: unset !important;
@@ -72,7 +72,7 @@ html, body, [class*="css"] {
 [data-testid="stMetricValue"] > div {
     font-size: 18px !important;
     font-weight: 700 !important;
-    color: #1a3a5c !important;
+    color: #ffffff !important;
     white-space: normal !important;
     overflow: visible !important;
     text-overflow: unset !important;
@@ -137,6 +137,22 @@ hr {
     font-size: 12px !important;
     font-weight: 600 !important;
     color: #475569 !important;
+}
+
+/* ── Filters section background ── */
+[data-testid="stSelectbox"] > div > div {
+    background-color: #2369A4 !important;   /* ← change dropdown bg */
+    border-color: #e2e8f0 !important;
+}
+
+/* ── Selectbox selected value text color ── */
+[data-testid="stSelectbox"] div[data-baseweb="select"] div {
+    color: #ffffff !important;              /* ← text color when closed */
+}
+
+/* ── Selectbox dropdown options text ── */
+[data-testid="stSelectbox"] ul li {
+    color: #1e293b !important;              /* ← text color in open dropdown */
 }
 </style>
 """, unsafe_allow_html=True)

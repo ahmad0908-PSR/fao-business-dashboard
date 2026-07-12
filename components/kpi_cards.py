@@ -106,11 +106,11 @@ def render_kpis(filtered_df, business_df, phase_df, phase_label="Phase 1"):
         # New layout with 3 cards for BDS status
         col5, col6, col7 = st.columns(3)
         with col5:
-            st.metric("✅ Selected for BDS", selected_count)
+            st.metric("✅ Selected  BDS", selected_count)
         with col6:
             st.metric("⏳ Pending/FAO", pending_count)
         with col7:
-            st.metric("❌ Not Selected for BDS", not_selected_count)
+            st.metric("❌ Not Selected  BDS", not_selected_count)
 
     # ── PHASE 2 KPIs ──────────────────────────────────────────────────
     else:
